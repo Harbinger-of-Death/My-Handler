@@ -46,6 +46,23 @@ class Handler {
             }
         }
     }
+    setEventFolder(options: { eventFolder: string}) {
+        if(typeof options.eventFolder !== "string") {
+            throw new Error("option command must be type string")
+        } else {
+            if(fs.statSync(options.eventFolder).isDirectory()) {
+                let collection = new Collection()
+                let commandFolder = fs.readdirSync(options.eventFolder).filter(w => w.endsWith(".js"))
+                for(let eventFile of commandFolder) {
+                    let events = require(`${options.eventFolder}/${eventFile}`)
+                    collection.set(events.name, events)
+                }
+                return collection
+            } else {
+                throw new Error("The directory you provided is not a directory")
+            }
+        }
+    }
 }
 
 
