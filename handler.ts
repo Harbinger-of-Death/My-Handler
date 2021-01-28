@@ -2,13 +2,12 @@ import { Client, Collection } from "discord.js"
 
 import * as fs from "fs"
 
-class Handler {
+export class Handler {
     constructor(
         client: Client) {
         if(!client) {
             console.log("Please instantiate a Client")
         }
-
     }
     /**
      * This method is to set your default prefix
@@ -64,6 +63,3 @@ class Handler {
         }
     }
 }
-
-
-export = Handler
