@@ -2,22 +2,23 @@ import { Client, Collection } from "discord.js"
 
 import * as fs from "fs"
 
-export class Handler {
+class Handler {
     constructor(
         client: Client) {
         if(!client) {
-            console.log("Please instantiate a Client")
+            throw new Error("Please initiate a client")
         }
     }
     /**
      * This method is to set your default prefix
      * @param prefix - The prefix you want, must be type string
+     * @type string | string[]
      */
-    setPrefix(prefix: string): string {
-        if(typeof prefix !== "string") {
-            throw new TypeError("PLease make sure the prefix is a type string")
-        } else {
+    setPrefix(prefix: string | string[]): string | string[] {
+        if(typeof prefix === "string" || Array.isArray(prefix)) {
             return prefix
+        } else {
+            throw new TypeError("Prefix must be type string or an Array")
         }
     }
     /**
@@ -63,3 +64,5 @@ export class Handler {
         }
     }
 }
+
+export = Handler
