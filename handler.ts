@@ -2,11 +2,24 @@ import { Client, Collection } from "discord.js"
 
 import * as fs from "fs"
 
+import * as dotenv from "dotenv"
+
+dotenv.config()
+
 class Handler {
+    /**
+     * Constructor to login to your bot
+     * @param client - The client variable
+     */
     constructor(
-        client?: Client) {
+        client: Client) {
         if(!client) {
             throw new Error("Please initiate a client")
+        }
+        if(!process.env.TOKEN) {
+            throw new Error("Please make sure you have made an environment variable for your token")
+        } else {
+            client.login(process.env.TOKEN)
         }
     }
     /**
@@ -28,7 +41,7 @@ class Handler {
      */
     setCommand(options: { command: string, filetype: string }) {
         if(typeof options.command !== "string") {
-            throw new Error("option command must be type string")
+            throw new TypeError("option command must be type string")
         } else {
             if(fs.statSync(options.command).isDirectory()) {
                 if(options.filetype === "" || options.filetype !== "") {
