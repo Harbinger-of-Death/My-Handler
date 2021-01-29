@@ -4,7 +4,7 @@ import * as fs from "fs"
 
 class Handler {
     constructor(
-        client: Client) {
+        client?: Client) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
