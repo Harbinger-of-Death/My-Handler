@@ -2,10 +2,6 @@ import { Client, Collection } from "discord.js"
 
 import * as fs from "fs"
 
-import * as dotenv from "dotenv"
-
-dotenv.config()
-
 class Handler {
     /**
      * Constructor to login to your bot
@@ -17,7 +13,7 @@ class Handler {
             throw new Error("Please initiate a client")
         }
         if(!process.env.TOKEN) {
-            throw new Error("Please make sure you have made an environment variable for your token")
+            throw new Error("Please make sure you have made an environment variable for your token, if you do u can type require(\"dotenv\").config() on ur index")
         } else {
             client.login(process.env.TOKEN)
         }
