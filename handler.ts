@@ -1,14 +1,16 @@
-import { Client, Collection } from "discord.js"
+import { Client, Collection, Message } from "discord.js"
 
 import * as fs from "fs"
+import { MeasureMemoryMode } from "vm"
 
 class Handler {
+    prefix: string
     /**
      * Constructor to login to your bot
      * @param client - The client variable
      */
     constructor(
-        client: Client) {
+        client: Client, prefix: string) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
@@ -17,17 +19,10 @@ class Handler {
         } else {
             client.login(process.env.TOKEN)
         }
-    }
-    /**
-     * This method is to set your default prefix
-     * @param prefix - The prefix you want, must be type string
-     * @type string | string[]
-     */
-    setPrefix(prefix: string | string[]): string | string[] {
-        if(typeof prefix === "string" || Array.isArray(prefix)) {
-            return prefix
+        if(!prefix) {
+            throw new Error("Please specify a prefix you want to use")
         } else {
-            throw new TypeError("Prefix must be type string or an Array")
+            this.prefix = prefix
         }
     }
     /**
@@ -69,6 +64,19 @@ class Handler {
                 return collection
             } else {
                 throw new Error("The directory you provided is not a directory")
+            }
+        }
+    }
+    setArgs(msg: Message, options: {splitby: string, noPrefix: boolean}) {
+        if(!options.noPrefix) {
+            if(options.splitby) {
+                return msg.content.replace(new RegExp(`^[${this.prefix}]`), "").split(options.splitby)
+            } else {
+                return msg.content.replace(new RegExp(`^[${this.prefix}]`), "")
+            }
+        } else {
+            if(options.splitby) {
+                return msg.content.split(options.splitby)
             }
         }
     }
