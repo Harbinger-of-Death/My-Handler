@@ -1,13 +1,13 @@
 import { Client, Collection, Message } from "discord.js"
 
 import * as fs from "fs"
-import { MeasureMemoryMode } from "vm"
 
 class Handler {
     prefix: string
     /**
      * Constructor to login to your bot
      * @param client - The client variable
+     * @param prefix - Your prefix
      */
     constructor(
         client: Client, prefix: string) {
@@ -67,6 +67,12 @@ class Handler {
             }
         }
     }
+    /**
+     * Does args automatically for u
+     * @param msg - The message object
+     * @param options - The options for your args
+     * @returns
+     */
     setArgs(msg: Message, options: {splitby: string, noPrefix: boolean}) {
         if(!options.noPrefix) {
             if(options.splitby) {
