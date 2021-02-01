@@ -14,3 +14,9 @@ let handler = require(path to the file)
 ```ts
 let commandHandler = new handler(<Client>, prefix_here) //<Client> - Would be the client class from djs
 ```
+
+Then you can use the following methods such as:
+
+```ts
+commandHandler.mathCommand(4, 2, { operations: "multiplication"}) //expected output is 8
+```
