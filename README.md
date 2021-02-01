@@ -1,8 +1,8 @@
 This is a handler made with ts for discord.js bot
 
-Installation
-1, just clone the repo
-2, compile the handler.ts
+Installation\n
+1, just clone the repo\n
+2, compile the handler.ts\n
 3, require it in your main js file
 
 Usage:
