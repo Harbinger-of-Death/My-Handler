@@ -117,7 +117,7 @@ class Handler {
             }
             let filters: CollectorFilter; 
             if(filter === "everyone") {
-                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && msg.member.id === user.id
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id)
             } else {
                 filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && user.id === filter
             }
