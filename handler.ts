@@ -116,8 +116,8 @@ class Handler {
                 msg.react(emojis)
             }
             let filters: CollectorFilter; 
-            if(filter === "everyone") {
-                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id)
+            if(filter === "everyone" || filter === "") {
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot
             } else {
                 filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && user.id === filter
             }
