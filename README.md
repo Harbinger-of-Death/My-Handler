@@ -6,7 +6,9 @@ Installation
 3, require it in your main js file
 
 Usage:
-
+```ts
 let handler = require(path to the file)
-
+```
+```ts
 let commandHandler = new handler(<Client>, prefix_here) //<Client> - Would be the client class from djs
+```
