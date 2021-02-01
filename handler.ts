@@ -1,9 +1,9 @@
-import { Client, Collection, Message } from "discord.js"
+import { Client, Collection, CollectorFilter, Message } from "discord.js"
 
 import * as fs from "fs"
 
 class Handler {
-    prefix: string
+    public prefix: string
     /**
      * Constructor to login to your bot
      * @param client - The client variable
@@ -30,12 +30,12 @@ class Handler {
      * @property option.command - The command dir where you want your bot to check files
      * @property option.filetype - The filetype you want your bot to check specifically. Default is .js
      */
-    setCommand(options: { command: string, filetype: string }) {
+    runCommand(options: { command: string, filetype: string}) {
         if(typeof options.command !== "string") {
             throw new TypeError("option command must be type string")
         } else {
             if(fs.statSync(options.command).isDirectory()) {
-                if(options.filetype === "" || options.filetype !== "") {
+                if(options.filetype) {
                     let default_filetype: string = ".js"
                     let collection = new Collection()
                     let commandFolder = fs.readdirSync(options.command).filter(w => w.endsWith(!options.filetype ? default_filetype : options.filetype))
@@ -44,24 +44,7 @@ class Handler {
                         collection.set(command.name, command)
                     }
                     return collection
-                }
-            } else {
-                throw new Error("The directory you provided is not a directory")
-            }
-        }
-    }
-    setEventFolder(options: { eventFolder: string}) {
-        if(typeof options.eventFolder !== "string") {
-            throw new Error("option command must be type string")
-        } else {
-            if(fs.statSync(options.eventFolder).isDirectory()) {
-                let collection = new Collection()
-                let commandFolder = fs.readdirSync(options.eventFolder).filter(w => w.endsWith(".js"))
-                for(let eventFile of commandFolder) {
-                    let events = require(`${options.eventFolder}/${eventFile}`)
-                    collection.set(events.name, events)
-                }
-                return collection
+                } 
             } else {
                 throw new Error("The directory you provided is not a directory")
             }
@@ -84,6 +67,67 @@ class Handler {
             if(options.splitby) {
                 return msg.content.split(options.splitby)
             }
+        }
+    }
+    /**
+     * Math command
+     * @param math - The first number
+     * @param math1 - The second number
+     * @param options.operations - The operation you want to do
+     */
+    mathCommand(math: number, math1: number, options: { operations: string }) {
+        if(options.operations === "multiplication") {
+            if(!isNaN(math) && !isNaN(math1)) {
+                return math * math1
+            } else {
+                console.log("I cannot multiply non-numbers")
+            }
+        } else if(options.operations === "division") {
+            if(!isNaN(math) && !isNaN(math1)) {
+                return math / math1
+            } else {
+                console.log("I cannot multiply non-numbers")
+            }
+        } else if(options.operations === "subtraction") {
+            if(!isNaN(math) && !isNaN(math1)) {
+                return math - math1
+            } else {
+                console.log("I cannot multiply non-numbers")
+            }
+        } else if(options.operations === "addition") {
+            if(!isNaN(math) && !isNaN(math1)) {
+                return math + math1
+            } else {
+                console.log("I cannot multiply non-numbers")
+            }
+        }
+    }
+    /**
+     * This is a reaction collector
+     * @param msg - The message object
+     * @param reactions - Reactions you want the bot to react to your message
+     * @param filter - The filter. Writing "everyone" will accept everyone reactions, else won't
+     * @param collectorOptions - The options for the collector
+     * @returns
+     */
+    reactionCollector(msg: Message, reactions: string | string[], filter: any, collectorOptions: {time: number}) {
+        if(Array.isArray(reactions) && typeof reactions !== "number") {
+            for (let emojis of reactions) {
+                msg.react(emojis)
+            }
+            let filters: CollectorFilter; 
+            if(filter === "everyone") {
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && msg.member.id === user.id
+            } else {
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && user.id === filter
+            }
+            return msg.awaitReactions(filters, collectorOptions)
+        } else if(typeof reactions === "number") {
+            throw new TypeError("Please make sure you didn't put a number for reactions")
+        } else {
+            let filters: CollectorFilter = (reaction, user) => reaction.emoji.name === reactions && user.id === filter
+            msg.react(reactions)
+            return msg.awaitReactions(filters, collectorOptions)
         }
     }
 }
