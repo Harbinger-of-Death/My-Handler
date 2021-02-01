@@ -1,5 +1,7 @@
 This is a handler made with ts for discord.js bot
 
+Just bored so I made this
+
 Installation
 1. just clone the repo
 2. compile the handler.ts
