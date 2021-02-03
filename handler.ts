@@ -130,6 +130,44 @@ class Handler {
             return msg.awaitReactions(filters, collectorOptions)
         }
     }
+    /**
+     * Simple function for sending a message in discord
+     * @param msg - The Message object
+     * @param message - The message you want to send
+     * @param options - options of how should the send works
+     */
+    messageSend(msg: Message, message: string, options: { delete: boolean, botMessageDelete: boolean, timeout: number}) {
+        if(typeof options.delete !== "boolean") throw new TypeError("options.delete must be a boolean")
+        if(typeof options.botMessageDelete !== "boolean") throw new TypeError("options.botMessageDelete must be a boolean")
+        if(options.botMessageDelete && options.delete) {
+            if(typeof options.timeout === "number") {
+                msg.delete()
+                msg.channel.send(message).then(m => {
+                    m.delete({timeout: options.timeout}).catch(() => undefined)
+                })
+            } else {
+                msg.delete()
+                msg.channel.send(message).then(m => {
+                    m.delete({timeout: 5000}).catch(() => undefined)
+                })
+            }
+        } else if(!options.botMessageDelete && options.delete) {
+            msg.delete()
+            msg.channel.send(message)
+        } else if(!options.delete && options.botMessageDelete) {
+            if(typeof options.timeout === "number") {
+                msg.channel.send(message).then(m => {
+                    m.delete({timeout: options.timeout}).catch(() => undefined)
+                })
+            } else {
+                msg.channel.send(message).then(m => {
+                    m.delete({timeout: 5000}).catch(() => undefined)
+                })
+            }
+        } else {
+            msg.channel.send(message)
+        }
+    }
 }
 
 export = Handler
