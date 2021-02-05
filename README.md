@@ -4,7 +4,7 @@ Just bored so I made this
 
 Installation
 1. just clone the repo
-2. compile the handler.ts
+2. transpile the handler.ts
 3. require it in your main js file
 
 Usage:
