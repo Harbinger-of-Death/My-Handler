@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, Message } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message } from "discord.js"
 
 import * as fs from "fs"
 
@@ -8,9 +8,11 @@ class Handler {
      * Constructor to login to your bot
      * @param client - The client variable
      * @param prefix - Your prefix
+     * @param status - The status you want
+     * @param message - The message for your status
      */
     constructor(
-        client: Client, prefix: string) {
+        client: Client, prefix: string, status: boolean, message: string | string[]) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
@@ -24,6 +26,29 @@ class Handler {
         } else {
             this.prefix = prefix
         }
+        client.on("ready", () => {
+            console.log("Your bot is ready")
+            if(status) {
+                if(!message) throw new Error("You provided no custom message for your bot status")
+                if(Array.isArray(message)) {
+                    client.user.setPresence({
+                        activity: {
+                            name: message[Math.floor(Math.random() * message.length)],
+                            type: "PLAYING"
+                        },
+                        status: "online"
+                    })
+                } else {
+                    client.user.setPresence({
+                        activity: {
+                            name: message,
+                            type: "PLAYING"
+                        },
+                        status: "online"
+                    })
+                }
+            }
+        })
     }
     /**
      * This method sets your command folder to the one you specified in option.command parameter
@@ -134,7 +159,7 @@ class Handler {
      * Simple function for sending a message in discord
      * @param msg - The Message object
      * @param message - The message you want to send
-     * @param options - options of how should the send works
+     * @param options - options for you message send
      */
     messageSend(msg: Message, message: string, options: { delete: boolean, botMessageDelete: boolean, timeout: number}) {
         if(typeof options.delete !== "boolean") throw new TypeError("options.delete must be a boolean")
@@ -166,6 +191,19 @@ class Handler {
             }
         } else {
             msg.channel.send(message)
+        }
+    }
+    /**
+     * Randomizes responses for you automatically
+     * @param msg - The message object
+     * @param response - Thw response(s) you want your bot to send in a random matter
+     * @returns randomized strings
+     */
+    responseRandomizer(msg: Message, response: string | string[]) {
+        if(Array.isArray(response)) {
+            return msg.channel.send(response[Math.floor(Math.random() * response.length)])
+        } else {
+            return msg.channel.send(response)
         }
     }
 }
