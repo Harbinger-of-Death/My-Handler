@@ -236,15 +236,15 @@ class Handler {
         return got.get(`https://covid2019-api.herokuapp.com/v2/country/${encodeURIComponent(arg.charAt(0).toUpperCase() + arg.replace(arg.charAt(0), ""))}`).then(m => {
             const content = JSON.parse(m.body)
             const covid_embed = new MessageEmbed()
-            .setTitle(content.data.location)
+            .setTitle(content.data.location ?? "Location not Found")
             .setColor("RED")
             .setAuthor("Covid Stats", msg.guild.iconURL())
             .setThumbnail("https://images.newscientist.com/wp-content/uploads/2020/02/11165812/c0481846-wuhan_novel_coronavirus_illustration-spl.jpg")
             .addFields(
-                { name: "Cases", value: content.data.confirmed, inline: true},
-                { name: "Death", value: content.data.deaths, inline: true},
-                { name: "Recovered", value: content.data.recovered},
-                { name: "Active Cases", value: content.data.active}
+                { name: "Cases", value: content.data.confirmed ?? "Location not Found", inline: true},
+                { name: "Death", value: content.data.deaths ?? "Location not Found", inline: true},
+                { name: "Recovered", value: content.data.recovered ?? "Location not Found"},
+                { name: "Active Cases", value: content.data.active ?? "Location not Found"}
             )
             .setFooter(`Last Updated ${content.dt}`)
 
