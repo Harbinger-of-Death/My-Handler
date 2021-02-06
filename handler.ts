@@ -1,6 +1,8 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed } from "discord.js"
 
 import * as fs from "fs"
+
+import got from "got"
 
 class Handler {
     public prefix: string
@@ -12,7 +14,7 @@ class Handler {
      * @param message - The message for your status
      */
     constructor(
-        client: Client, prefix: string, status: boolean, message: string | string[]) {
+        client: Client, prefix: string) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
@@ -26,29 +28,6 @@ class Handler {
         } else {
             this.prefix = prefix
         }
-        client.on("ready", () => {
-            console.log("Your bot is ready")
-            if(status) {
-                if(!message) throw new Error("You provided no custom message for your bot status")
-                if(Array.isArray(message)) {
-                    client.user.setPresence({
-                        activity: {
-                            name: message[Math.floor(Math.random() * message.length)],
-                            type: "PLAYING"
-                        },
-                        status: "online"
-                    })
-                } else {
-                    client.user.setPresence({
-                        activity: {
-                            name: message,
-                            type: "PLAYING"
-                        },
-                        status: "online"
-                    })
-                }
-            }
-        })
     }
     /**
      * This method sets your command folder to the one you specified in option.command parameter
@@ -205,6 +184,72 @@ class Handler {
         } else {
             return msg.channel.send(response)
         }
+    }
+    /**
+     * This function set the status of your bot to whatever you want
+     * @param client - The Client
+     * @param activity - Whether you want an activity or not.
+     * @param statusMessage - The message you want your bot to show in their status, or the url to your twitch if type is equals to 1
+     * @param statusType - The activity type
+     * @param status - If you want your bot to show as online, dnd, offline.
+     * @returns Sets your bot Presence.
+     */
+    setStatus(client: Client, activity: boolean, statusMessage: string, statusType: number, status: PresenceStatusData) {
+        if(!client) throw new Error("Please make sure you specified a client")
+        if(activity) {
+            if(statusMessage) {
+                if(statusType === 1) {
+                    return client.user.setPresence({
+                        activity: {
+                            url: statusMessage,
+                            type: statusType
+                        },
+                        status: !status ? "online" : status
+                    })
+                } else {
+                    return client.user.setPresence({
+                        activity: {
+                            name: statusMessage,
+                            type: statusType
+                        },
+                        status: !status ? "online" : status
+                    })
+                }
+            } else {
+                return client.user.setPresence({
+                    activity: {
+                        name: "Seems like you don't have status set in",
+                        type: "PLAYING"
+                    },
+                    status: "online"
+                })
+            }
+        }
+    }
+    /**
+     * This method checks the covid stat for the country you specified
+     * @param msg - The message object
+     * @param arg - The country you want to check the covid stats on
+     * @returns
+     */
+    async covidStat(msg: Message, arg: string) {
+        return got.get(`https://covid2019-api.herokuapp.com/v2/country/${encodeURIComponent(arg.charAt(0).toUpperCase() + arg.replace(arg.charAt(0), ""))}`).then(m => {
+            const content = JSON.parse(m.body)
+            const covid_embed = new MessageEmbed()
+            .setTitle(content.data.location)
+            .setColor("RED")
+            .setAuthor("Covid Stats", msg.guild.iconURL())
+            .setThumbnail("https://images.newscientist.com/wp-content/uploads/2020/02/11165812/c0481846-wuhan_novel_coronavirus_illustration-spl.jpg")
+            .addFields(
+                { name: "Cases", value: content.data.confirmed, inline: true},
+                { name: "Death", value: content.data.deaths, inline: true},
+                { name: "Recovered", value: content.data.recovered},
+                { name: "Active Cases", value: content.data.active}
+            )
+            .setFooter(`Last Updated ${content.dt}`)
+
+            msg.channel.send(covid_embed)
+        })
     }
 }
 
