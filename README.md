@@ -4,15 +4,15 @@ Just bored so I made this
 
 Installation
 1. just clone the repo
-2. transpile the handler.ts
-3. require it in your main js file
+2. transpile the handler.ts this creates a js version of the handler.ts code
+3. require the newly created js version of the handler in your main file
 
 Usage:
 ```ts
 let handler = require(path to the file)
 ```
 ```ts
-let commandHandler = new handler(<Client>, prefix_here) //<Client> - Would be the client class from djs
+let commandHandler = new handler(<Client>, prefix_here, commandDirectory(optional), commandFiletype(optional)) //<Client> - Would be the client class from djs
 ```
 
 Then you can use the following methods such as:
