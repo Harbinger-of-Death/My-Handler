@@ -16,7 +16,7 @@ class Handler {
      * @param message - The message for your status
      */
     constructor(
-        client: Client, prefix: string, commandDir: string, commandFiletype: string) {
+        client: Client, prefix: string, commandDir?: string, commandFiletype?: string) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
