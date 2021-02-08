@@ -5,7 +5,7 @@ import * as fs from "fs"
 import got from "got"
 
 class Handler {
-    public prefix: string
+    public prefix: string | string[]
     public commandDir: string
     public commandFiletype: string
     /**
@@ -16,7 +16,7 @@ class Handler {
      * @param message - The message for your status
      */
     constructor(
-        client: Client, prefix: string, commandDir?: string, commandFiletype?: string) {
+        client: Client, prefix: string | string[], commandDir?: string, commandFiletype?: string) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
@@ -57,12 +57,26 @@ class Handler {
                     }
                     if(execute) {
                         let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
-                        let alias = collection.get(args[0]) || collection.find(command => command.aliases.some(w => w === args[0]))
-                        if(msg.content.startsWith(this.prefix)) {
-                            if(alias) {
-                                return alias.execute(msg, args)
+                        let alias = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
+                        if(Array.isArray(this.prefix)) {
+                            if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
+                                if(alias) {
+                                    return alias.execute(msg, args)
+                                } else {
+                                    return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                }
                             } else {
-                                return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                return this.messageSend(msg, `<@${msg.member.id}>: Prefixes are ${this.prefix.map(w => w).join(", ")}`, { delete: true, botMessageDelete: true, timeout: 10000})
+                            }
+                        } else {
+                            if(msg.content.startsWith(this.prefix)) {
+                                if(alias) {
+                                    return alias.execute(msg, args)
+                                } else {
+                                    return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                }
+                            } else {
+                                return this.messageSend(msg, `<@${msg.member.id}>: The prefix is ${this.prefix}`, { delete: true, botMessageDelete: true, timeout: 10000})
                             }
                         }
                     }
@@ -79,16 +93,30 @@ class Handler {
      * @returns
      */
     setArgs(msg: Message, options: {splitby: string | RegExp, noPrefix: boolean}) {
-        if(!options.noPrefix) {
-            if(options.splitby) {
-                return msg.content.replace(new RegExp(`^[${this.prefix}]`), "").split(options.splitby)
+        if(!Array.isArray(this.prefix)) {
+            if(!options.noPrefix) {
+                if(options.splitby) {
+                    return msg.content.replace(new RegExp(`^[${this.prefix}]`), "").split(options.splitby)
+                } else {
+                    return msg.content.replace(new RegExp(`^[${this.prefix}]`), "")
+                }
             } else {
-                return msg.content.replace(new RegExp(`^[${this.prefix}]`), "")
+                if(options.splitby) {
+                    return msg.content.split(options.splitby)
+                }
             }
         } else {
-            if(options.splitby) {
-                return msg.content.split(options.splitby)
-            }
+            if(!options.noPrefix) {
+                if(options.splitby) {
+                    return msg.content.slice(1).trim().split(/ +/g)
+                } else {
+                    return msg.content.slice(1).trim()
+                }
+            } else {
+                if(options.splitby) {
+                    return msg.content.split(options.splitby)
+                }
+            } 
         }
     }
     /**
