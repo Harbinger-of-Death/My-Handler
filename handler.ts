@@ -6,6 +6,8 @@ import got from "got"
 
 class Handler {
     public prefix: string
+    public commandDir: string
+    public commandFiletype: string
     /**
      * Constructor to login to your bot
      * @param client - The client variable
@@ -14,7 +16,7 @@ class Handler {
      * @param message - The message for your status
      */
     constructor(
-        client: Client, prefix: string) {
+        client: Client, prefix: string, commandDir: string, commandFiletype: string) {
         if(!client) {
             throw new Error("Please initiate a client")
         }
@@ -28,26 +30,42 @@ class Handler {
         } else {
             this.prefix = prefix
         }
+        if(commandDir) {
+            if(commandFiletype) {
+                this.commandDir = commandDir
+                this.commandFiletype = commandFiletype
+            }
+        }
     }
     /**
-     * This method sets your command folder to the one you specified in option.command parameter
-     * @property option.command - The command dir where you want your bot to check files
-     * @property option.filetype - The filetype you want your bot to check specifically. Default is .js
+     * This method returns a collection of the files of the folder you specified in the constructor
+     * @param msg - The Message object
+     * @param execute - If you want to execute the file
+     * @param executeParams - The parameters you want for your execute function to have, to use multiple params do param-param
      */
-    runCommand(options: { command: string, filetype: string}) {
-        if(typeof options.command !== "string") {
+    runCommand(msg: Message, execute: boolean) {
+        if(typeof this.commandDir !== "string") {
             throw new TypeError("option command must be type string")
         } else {
-            if(fs.statSync(options.command).isDirectory()) {
-                if(options.filetype) {
+            if(fs.statSync(this.commandDir).isDirectory()) {
+                if(this.commandFiletype) {
                     let default_filetype: string = ".js"
-                    let collection = new Collection()
-                    let commandFolder = fs.readdirSync(options.command).filter(w => w.endsWith(!options.filetype ? default_filetype : options.filetype))
+                    let collection: Collection<any, any> = new Collection()
+                    let commandFolder = fs.readdirSync(this.commandDir).filter(w => w.endsWith(!this.commandFiletype ? default_filetype : this.commandFiletype))
                     for(let file of commandFolder) {
-                        let command = require(`${options.command}/${file}`)
+                        let command = require(`${this.commandDir}/${file}`)
                         collection.set(command.name, command)
                     }
-                    return collection
+                    if(execute) {
+                        let alias = collection.get(this.setArgs(msg, { splitby: / +/g, noPrefix: false})[0]) || collection.find(command => command.aliases.some(w => this.setArgs(msg, { splitby: / +/g, noPrefix: false})[0].includes(w)))
+                        if(msg.content.startsWith(this.prefix)) {
+                            if(alias) {
+                                return alias.execute(msg, this.setArgs(msg, { splitby: / +/g, noPrefix: false}))
+                            } else {
+                                return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                            }
+                        }
+                    }
                 } 
             } else {
                 throw new Error("The directory you provided is not a directory")
@@ -60,7 +78,7 @@ class Handler {
      * @param options - The options for your args
      * @returns
      */
-    setArgs(msg: Message, options: {splitby: string, noPrefix: boolean}) {
+    setArgs(msg: Message, options: {splitby: string | RegExp, noPrefix: boolean}) {
         if(!options.noPrefix) {
             if(options.splitby) {
                 return msg.content.replace(new RegExp(`^[${this.prefix}]`), "").split(options.splitby)
