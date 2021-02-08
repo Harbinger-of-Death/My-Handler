@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel } from "discord.js"
 
 import * as fs from "fs"
 
@@ -115,6 +115,7 @@ class Handler {
      * @returns
      */
     reactionCollector(msg: Message, reactions: string | string[], filter: any, collectorOptions: {time: number}) {
+        if(!msg.guild) return console.log("Sounds like the reaction is happening in DM which I can't collect on")
         if(Array.isArray(reactions) && typeof reactions !== "number") {
             for (let emojis of reactions) {
                 msg.react(emojis)
@@ -250,6 +251,38 @@ class Handler {
 
             msg.channel.send(covid_embed)
         })
+    }
+    /**
+     * A method to automatically do clean command for you with some options
+     * @param msg - The message object
+     * @param count - The count of how many messages you want to be deleted
+     * @param options - The options, if nuke is set to true it will clone the channel with the same stuff as the old one, I do this to prevent API spam
+     */
+    async cleanCommand(msg: any, count: number, options: { nuke: boolean}) {
+        if(!msg) throw new Error("Please specify something in the msg parameter")
+        if(options.nuke) {
+            return msg.channel.clone({name: msg.channel.name, type: msg.channel.type, topic: msg.channel.topic, parent: msg.channel.parentID}).then(channel => {
+                msg.channel.delete()
+                channel.send(`<@${msg.member.id}>: You've nuked the last channel so I cloned it and created a new one`)
+            })
+        } else {
+            if(count >= 1 && count <= 100 && !isNaN(count)) {
+                await msg.delete()
+                msg.channel.bulkDelete(count).then(message => {
+                    if(message.size <= 1) {
+                        this.messageSend(msg, `Deleted ${message.size} message`, { delete: false, botMessageDelete: true, timeout: 5000})
+                    } else {
+                        this.messageSend(msg, `Deleted ${message.size} messages`, { delete: false, botMessageDelete: true, timeout: 5000})
+                    }
+                })
+            } else if(isNaN(count)) {
+                this.messageSend(msg, `<@${msg.member.id}>: You specified a Not a Number value`, { delete: true, botMessageDelete: true, timeout: 5000})
+            } else if(count > 100) {
+                this.messageSend(msg, `<@${msg.member.id}>: You cannot delete that much messages`, { delete: true, botMessageDelete: true, timeout: 5000})
+            } else {
+                this.messageSend(msg, `<@${msg.member.id}>: The delete count cannot be less than 1`, { delete: false, botMessageDelete: true, timeout: 5000})
+            }
+        }
     }
 }
 
