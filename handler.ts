@@ -41,7 +41,6 @@ class Handler {
      * This method returns a collection of the files of the folder you specified in the constructor
      * @param msg - The Message object
      * @param execute - If you want to execute the file
-     * @param executeParams - The parameters you want for your execute function to have, to use multiple params do param-param
      */
     runCommand(msg: Message, execute: boolean) {
         if(typeof this.commandDir !== "string") {
