@@ -56,10 +56,11 @@ class Handler {
                         collection.set(command.name, command)
                     }
                     if(execute) {
-                        let alias = collection.get(this.setArgs(msg, { splitby: / +/g, noPrefix: false})[0]) || collection.find(command => command.aliases.some(w => this.setArgs(msg, { splitby: / +/g, noPrefix: false})[0].includes(w)))
+                        let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
+                        let alias = collection.get(args[0]) || collection.find(command => command.aliases.some(w => w === args[0]))
                         if(msg.content.startsWith(this.prefix)) {
                             if(alias) {
-                                return alias.execute(msg, this.setArgs(msg, { splitby: / +/g, noPrefix: false}))
+                                return alias.execute(msg, args)
                             } else {
                                 return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
                             }
