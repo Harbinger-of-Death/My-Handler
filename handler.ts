@@ -241,7 +241,6 @@ class Handler {
     }
     /**
      * This function set the status of your bot to whatever you want
-     * @param client - The Client
      * @param activity - Whether you want an activity or not.
      * @param statusMessage - The message you want your bot to show in their status, or the url to your twitch if type is equals to 1
      * @param statusType - The activity type
