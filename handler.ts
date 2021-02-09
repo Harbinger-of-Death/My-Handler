@@ -4,6 +4,8 @@ import * as fs from "fs"
 
 import got from "got"
 
+type Activities = "PLAYING" | "STREAMING" | "LISTENING" | "WATCHING" | "COMPETING"
+
 class Handler {
     public prefix: string | string[]
     public commandDir: string
@@ -247,7 +249,7 @@ class Handler {
      * @param status - If you want your bot to show as online, dnd, offline.
      * @returns Sets your bot Presence.
      */
-    setStatus(activity: boolean, statusMessage: string, statusType: number | ActivityType, status?: PresenceStatusData) {
+    setStatus(activity: boolean, statusMessage: string, statusType: number | Activities, status?: PresenceStatusData) {
         if(activity) {
             if(statusMessage) {
                 if(statusType === 1 || statusType === "STREAMING") {
