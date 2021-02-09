@@ -12,8 +12,8 @@ class Handler {
      * Constructor to login to your bot
      * @param client - The client variable
      * @param prefix - Your prefix
-     * @param status - The status you want
-     * @param message - The message for your status
+     * @param commandDir - The path to your command file
+     * @param commandFiletype - The filetype you want to only look in your command file
      */
     constructor(
         client: Client, prefix: string | string[], commandDir?: string, commandFiletype?: string) {
@@ -253,7 +253,7 @@ class Handler {
                     return client.user.setPresence({
                         activity: {
                             url: statusMessage,
-                            type: statusType
+                            type: "STREAMING"
                         },
                         status: !status ? "online" : status
                     })
