@@ -57,27 +57,31 @@ class Handler {
                     }
                     if(execute) {
                         let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
-                        let alias = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
-                        if(Array.isArray(this.prefix)) {
-                            if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
-                                if(alias) {
-                                    return alias.execute(msg, args)
+                        let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
+                        if(command.execute) {
+                            if(Array.isArray(this.prefix)) {
+                                if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
+                                    if(command) {
+                                        return command.execute(msg, args)
+                                    } else {
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                    }
                                 } else {
-                                    return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                    return this.messageSend(msg, `<@${msg.member.id}>: Prefixes are ${this.prefix.map(w => w).join(", ")}`, { delete: true, botMessageDelete: true, timeout: 10000})
                                 }
                             } else {
-                                return this.messageSend(msg, `<@${msg.member.id}>: Prefixes are ${this.prefix.map(w => w).join(", ")}`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                if(msg.content.startsWith(this.prefix)) {
+                                    if(command) {
+                                        return command.execute(msg, args)
+                                    } else {
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                    }
+                                } else {
+                                    return this.messageSend(msg, `<@${msg.member.id}>: The prefix is ${this.prefix}`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                }
                             }
                         } else {
-                            if(msg.content.startsWith(this.prefix)) {
-                                if(alias) {
-                                    return alias.execute(msg, args)
-                                } else {
-                                    return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
-                                }
-                            } else {
-                                return this.messageSend(msg, `<@${msg.member.id}>: The prefix is ${this.prefix}`, { delete: true, botMessageDelete: true, timeout: 10000})
-                            }
+                            throw new Error("There seems to be no execute function in ur command file")
                         }
                     }
                 } 
