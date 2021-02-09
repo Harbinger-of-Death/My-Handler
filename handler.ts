@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType } from "discord.js"
 
 import * as fs from "fs"
 
@@ -242,21 +242,21 @@ class Handler {
     /**
      * This function set the status of your bot to whatever you want
      * @param activity - Whether you want an activity or not.
-     * @param statusMessage - The message you want your bot to show in their status, or the url to your twitch if type is equals to 1
+     * @param statusMessage - The message you want your bot to show in their status, or the url to your twitch if type is equals to 1 or STREAMING
      * @param statusType - The activity type
      * @param status - If you want your bot to show as online, dnd, offline.
      * @returns Sets your bot Presence.
      */
-    setStatus(activity: boolean, statusMessage: string, statusType: number, status: PresenceStatusData) {
+    setStatus(activity: boolean, statusMessage: string, statusType: number | ActivityType, status?: PresenceStatusData) {
         if(activity) {
             if(statusMessage) {
-                if(statusType === 1) {
+                if(statusType === 1 || statusType === "STREAMING") {
                     return this.client.user.setPresence({
                         activity: {
                             url: statusMessage,
                             type: "STREAMING"
                         },
-                        status: !status ? "online" : status
+                        status: status
                     })
                 } else {
                     return this.client.user.setPresence({
@@ -264,7 +264,7 @@ class Handler {
                             name: statusMessage,
                             type: statusType
                         },
-                        status: !status ? "online" : status
+                        status: status
                     })
                 }
             } else {
@@ -273,7 +273,6 @@ class Handler {
                         name: "Seems like you don't have status set in",
                         type: "PLAYING"
                     },
-                    status: "online"
                 })
             }
         }
