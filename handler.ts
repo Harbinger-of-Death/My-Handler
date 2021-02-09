@@ -108,7 +108,7 @@ class Handler {
         } else {
             if(!options.noPrefix) {
                 if(options.splitby) {
-                    return msg.content.slice(1).trim().split(/ +/g)
+                    return msg.content.slice(1).trim().split(options.splitby)
                 } else {
                     return msg.content.slice(1).trim()
                 }
