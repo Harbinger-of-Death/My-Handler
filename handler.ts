@@ -64,7 +64,7 @@ class Handler {
                                     if(command) {
                                         return command.execute(msg, args)
                                     } else {
-                                        return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
                                     }
                                 } else {
                                     return this.messageSend(msg, `<@${msg.member.id}>: Prefixes are ${this.prefix.map(w => w).join(", ")}`, { delete: true, botMessageDelete: true, timeout: 10000})
@@ -74,7 +74,7 @@ class Handler {
                                     if(command) {
                                         return command.execute(msg, args)
                                     } else {
-                                        return this.messageSend(msg, `<@${msg.member.id}>: Command not Found`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
                                     }
                                 } else {
                                     return this.messageSend(msg, `<@${msg.member.id}>: The prefix is ${this.prefix}`, { delete: true, botMessageDelete: true, timeout: 10000})
