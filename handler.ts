@@ -8,6 +8,7 @@ class Handler {
     public prefix: string | string[]
     public commandDir: string
     public commandFiletype: string
+    public client: Client
     /**
      * Constructor to login to your bot
      * @param client - The client variable
@@ -19,6 +20,8 @@ class Handler {
         client: Client, prefix: string | string[], commandDir?: string, commandFiletype?: string) {
         if(!client) {
             throw new Error("Please initiate a client")
+        } else {
+            this.client = client
         }
         if(!process.env.TOKEN) {
             throw new Error("Please make sure you have made an environment variable for your token, if you do u can type require(\"dotenv\").config() on ur index")
@@ -245,12 +248,11 @@ class Handler {
      * @param status - If you want your bot to show as online, dnd, offline.
      * @returns Sets your bot Presence.
      */
-    setStatus(client: Client, activity: boolean, statusMessage: string, statusType: number, status: PresenceStatusData) {
-        if(!client) throw new Error("Please make sure you specified a client")
+    setStatus(activity: boolean, statusMessage: string, statusType: number, status: PresenceStatusData) {
         if(activity) {
             if(statusMessage) {
                 if(statusType === 1) {
-                    return client.user.setPresence({
+                    return this.client.user.setPresence({
                         activity: {
                             url: statusMessage,
                             type: "STREAMING"
@@ -258,7 +260,7 @@ class Handler {
                         status: !status ? "online" : status
                     })
                 } else {
-                    return client.user.setPresence({
+                    return this.client.user.setPresence({
                         activity: {
                             name: statusMessage,
                             type: statusType
@@ -267,7 +269,7 @@ class Handler {
                     })
                 }
             } else {
-                return client.user.setPresence({
+                return this.client.user.setPresence({
                     activity: {
                         name: "Seems like you don't have status set in",
                         type: "PLAYING"
