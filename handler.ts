@@ -6,11 +6,14 @@ import got from "got"
 
 type Activities = "PLAYING" | "STREAMING" | "LISTENING" | "WATCHING" | "COMPETING"
 
+let collection: Collection<any, any> = new Collection()
+
 class Handler {
     public prefix: string | string[]
     public commandDir: string
     public commandFiletype: string
     public client: Client
+    public default_prefix: string
     /**
      * Constructor to login to your bot
      * @param client - The client variable
@@ -31,7 +34,7 @@ class Handler {
             client.login(process.env.TOKEN)
         }
         if(!prefix) {
-            throw new Error("Please specify a prefix you want to use")
+            this.default_prefix = "-"
         } else {
             this.prefix = prefix
         }
@@ -43,7 +46,7 @@ class Handler {
         }
     }
     /**
-     * This method returns a collection of the files of the folder you specified in the constructor
+     * This method returns a collection of the files of the folder you specified in the constructor. You can access the help command by -help
      * @param msg - The Message object
      * @param execute - If you want to execute the file
      */
@@ -54,13 +57,13 @@ class Handler {
             if(fs.statSync(this.commandDir).isDirectory()) {
                 if(this.commandFiletype) {
                     let default_filetype: string = ".js"
-                    let collection: Collection<any, any> = new Collection()
                     let commandFolder = fs.readdirSync(this.commandDir).filter(w => w.endsWith(!this.commandFiletype ? default_filetype : this.commandFiletype))
                     for(let file of commandFolder) {
                         let command = require(`${this.commandDir}/${file}`)
                         collection.set(command.name, command)
                     }
                     if(execute) {
+                        if(msg.content.startsWith(`-help`)) return msg.channel.send(collection.map(command => !command.description ? "No description Found" : command.description).join("\n"))
                         try {
                             let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
                             let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
