@@ -61,24 +61,28 @@ class Handler {
                         collection.set(command.name, command)
                     }
                     if(execute) {
-                        let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
-                        let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
-                        if(Array.isArray(this.prefix)) {
-                            if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
-                                if(command) {
-                                    return command.execute(msg, args)
-                                } else {
-                                    return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
+                        try {
+                            let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
+                            let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
+                            if(Array.isArray(this.prefix)) {
+                                if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
+                                    if(command) {
+                                        return command.execute(msg, args)
+                                    } else {
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                    }
+                                }
+                            } else {
+                                if(msg.content.startsWith(this.prefix)) {
+                                    if(command) {
+                                        return command.execute(msg, args)
+                                    } else {
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                    }
                                 }
                             }
-                        } else {
-                            if(msg.content.startsWith(this.prefix)) {
-                                if(command) {
-                                    return command.execute(msg, args)
-                                } else {
-                                    return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
-                                 }
-                            }
+                        } catch (err) {
+                            return this.messageSend(msg, `<@${msg.member.id}>: Seems like the command file you are trying to execute has no execute function, please add one`, { delete: true, botMessageDelete: true, timeout: 5000})
                         }
                     }
                 } 
