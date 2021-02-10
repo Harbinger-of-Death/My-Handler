@@ -63,29 +63,57 @@ class Handler {
                         collection.set(command.name, command)
                     }
                     if(execute) {
-                        if(msg.content.startsWith(`-help`)) return msg.channel.send(collection.map(command => !command.description ? "No description Found" : command.description).join("\n"))
+                        if(msg.content.startsWith(`-help`)) return msg.channel.send(collection.map(command => `${command.name} - ${!command.description ? "No description Found" : command.description}`).join("\n"))
                         try {
                             let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
                             let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
                             if(Array.isArray(this.prefix)) {
                                 if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
                                     if(command) {
-                                        return command.execute(msg, args, MessageEmbed)
+                                        if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
+                                            if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
+                                                return command.execute(msg, args, MessageEmbed)
+                                            } else {
+                                                return this.messageSend(msg, `<@${msg.member.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
+                                            }
+                                        } else if(!command.hasOwnProperty("requiredRoles")) {
+                                            return command.execute(msg, args, MessageEmbed)
+                                        } else {
+                                            if(msg.member.roles.cache.has(command.requiredRoles)) {
+                                                return command.execute(msg, args, MessageEmbed)
+                                            } else {
+                                                return this.messageSend(msg, `<@${msg.member.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
+                                            }
+                                        }
                                     } else {
-                                        return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Ooops! seems like the command you want to execute doesn't exist`, { delete: true, botMessageDelete: true, timeout: 5000})
                                     }
                                 }
                             } else {
                                 if(msg.content.startsWith(this.prefix)) {
                                     if(command) {
-                                        return command.execute(msg, args, MessageEmbed)
+                                        if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
+                                            if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
+                                                return command.execute(msg, args, MessageEmbed)
+                                            } else {
+                                                return this.messageSend(msg, `<@${msg.member.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
+                                            }
+                                        } else if(!command.hasOwnProperty("requiredRoles")) {
+                                            return command.execute(msg, args, MessageEmbed)
+                                        } else {
+                                            if(msg.member.roles.cache.has(command.requiredRoles)) {
+                                                return command.execute(msg, args, MessageEmbed)
+                                            } else {
+                                                return this.messageSend(msg, `<@${msg.member.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
+                                            }
+                                        }
                                     } else {
-                                        return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
+                                        return this.messageSend(msg, `<@${msg.member.id}>: Ooops! seems like the command you want to execute doesn't exist`, { delete: true, botMessageDelete: true, timeout: 5000})
                                     }
                                 }
                             }
                         } catch (err) {
-                            return this.messageSend(msg, `<@${msg.member.id}>: Seems like the command file you are trying to execute has no execute function, please add one`, { delete: true, botMessageDelete: true, timeout: 5000})
+                            return this.messageSend(msg, `<@${msg.member.id}>: Seems like the command file you are trying to execute has no execute function or requiredRoles, please add one`, { delete: true, botMessageDelete: true, timeout: 5000})
                         }
                     }
                 } 
@@ -241,7 +269,7 @@ class Handler {
         }
     }
     /**
-     * This function set the status of your bot to whatever you want
+     * This function set the status of your bot to whatever you want. Must be used inside a ready event.
      * @param activity - Whether you want an activity or not.
      * @param statusMessage - The message you want your bot to show in their status, or the url to your twitch if type is equals to 1 or STREAMING
      * @param statusType - The activity type
