@@ -46,7 +46,7 @@ class Handler {
         }
     }
     /**
-     * This method returns a collection of the files of the folder you specified in the constructor. You can access the help command by -help
+     * This method runs the command files from the folder you specified in the constructor that if it finds your message arguments equals to the command.name or one of the aliases of the command. You can access the help command by -help
      * @param msg - The Message object
      * @param execute - If you want to execute the file
      */
@@ -70,7 +70,7 @@ class Handler {
                             if(Array.isArray(this.prefix)) {
                                 if(this.prefix.some(prefixes => msg.content.startsWith(prefixes))) {
                                     if(command) {
-                                        return command.execute(msg, args)
+                                        return command.execute(msg, args, MessageEmbed)
                                     } else {
                                         return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
                                     }
@@ -78,7 +78,7 @@ class Handler {
                             } else {
                                 if(msg.content.startsWith(this.prefix)) {
                                     if(command) {
-                                        return command.execute(msg, args)
+                                        return command.execute(msg, args, MessageEmbed)
                                     } else {
                                         return this.messageSend(msg, `<@${msg.member.id}>: Oops! seems like the command you inputted cannot be found in your command files, you sure this command exist?`, { delete: true, botMessageDelete: true, timeout: 10000})
                                     }
