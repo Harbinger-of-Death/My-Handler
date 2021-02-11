@@ -183,7 +183,7 @@ class Handler {
                                 }
                             }
                         } catch (err) {
-                            return this.messageSend(msg, `<@${msg.author.id}>: Seems like the command file you are trying to execute has no execute function or requiredRoles, please add one`, { dm: true })
+                            return msg.channel.send(`${msg.author}: Seems like the command you are trying to execute has no execute function, or there is an error on the handler, might take awhile for the dev to fix this`)
                         }
                     }
                 } 
