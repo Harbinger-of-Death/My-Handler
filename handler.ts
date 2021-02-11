@@ -8,7 +8,11 @@ type Activities = "PLAYING" | "STREAMING" | "LISTENING" | "WATCHING" | "COMPETIN
 
 let collection: Collection<any, any> = new Collection()
 
-class Handler {
+import * as dotenv from "dotenv"
+
+dotenv.config()
+
+export default class Handler {
     public prefix: string | string[]
     public commandDir: string
     public commandFiletype: string
@@ -29,7 +33,7 @@ class Handler {
             this.client = client
         }
         if(!process.env.TOKEN) {
-            throw new Error("Please make sure you have made an environment variable for your token, if you do u can type require(\"dotenv\").config() on ur index")
+            throw new Error("Please make sure you have made an environment variable for your token.")
         } else {
             client.login(process.env.TOKEN)
         }
@@ -436,5 +440,3 @@ class Handler {
         }
     }
 }
-
-export = Handler
