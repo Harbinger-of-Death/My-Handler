@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel } from "discord.js"
 
 import * as fs from "fs"
 
@@ -413,29 +413,35 @@ export default class Handler {
      * @param count - The count of how many messages you want to be deleted
      * @param options - The options, if nuke is set to true it will clone the channel with the same stuff as the old one, I do this to prevent API spam
      */
-    async cleanCommand(msg: any, count: number, options: { nuke: boolean}) {
-        if(!msg) throw new Error("Please specify something in the msg parameter")
-        if(options.nuke) {
-            return msg.channel.clone({name: msg.channel.name, type: msg.channel.type, topic: msg.channel.topic, parent: msg.channel.parentID}).then(channel => {
-                msg.channel.delete()
-                channel.send(`<@${msg.member.id}>: You've nuked the last channel so I cloned it and created a new one`)
-            })
-        } else {
-            if(count >= 1 && count <= 100 && !isNaN(count)) {
-                await msg.delete()
-                msg.channel.bulkDelete(count).then(message => {
-                    if(message.size <= 1) {
-                        this.messageSend(msg, `Deleted ${message.size} message`, { delete: false, botMessageDelete: true, timeout: 5000})
-                    } else {
-                        this.messageSend(msg, `Deleted ${message.size} messages`, { delete: false, botMessageDelete: true, timeout: 5000})
-                    }
+    async cleanCommand(msg: Message, count: number, options: { nuke: boolean}) {
+        if(!msg) throw new Error("Please specify something in the channel parameter")
+        if(msg.channel.type === "text") {
+            if(options.nuke) {
+                return msg.channel.clone({name: msg.channel.name, type: msg.channel.type, topic: msg.channel.topic, parent: msg.channel.parentID}).then(channel => {
+                    channel.delete()
+                    channel.send(`<@${msg.member.id}>: You've nuked the last channel so I cloned it and created a new one`)
                 })
-            } else if(isNaN(count)) {
-                this.messageSend(msg, `<@${msg.member.id}>: You specified a Not a Number value`, { delete: true, botMessageDelete: true, timeout: 5000})
-            } else if(count > 100) {
-                this.messageSend(msg, `<@${msg.member.id}>: You cannot delete that much messages`, { delete: true, botMessageDelete: true, timeout: 5000})
             } else {
-                this.messageSend(msg, `<@${msg.member.id}>: The delete count cannot be less than 1`, { delete: false, botMessageDelete: true, timeout: 5000})
+                if(msg.guild.me.hasPermission("MANAGE_MESSAGES")) {
+                    if(count >= 1 && count <= 100 && !isNaN(count)) {
+                        await msg.delete()
+                        msg.channel.bulkDelete(count).then(message => {
+                            if(message.size <= 1) {
+                                this.messageSend(msg, `Deleted ${message.size} message`, { delete: false, botMessageDelete: true, timeout: 5000})
+                            } else {
+                                this.messageSend(msg, `Deleted ${message.size} messages`, { delete: false, botMessageDelete: true, timeout: 5000})
+                            }
+                        })
+                    } else if(isNaN(count)) {
+                        this.messageSend(msg, `<@${msg.member.id}>: You specified a Not a Number value`, { delete: true, botMessageDelete: true, timeout: 5000})
+                    } else if(count > 100) {
+                        this.messageSend(msg, `<@${msg.member.id}>: You cannot delete that much messages`, { delete: true, botMessageDelete: true, timeout: 5000})
+                    } else {
+                        this.messageSend(msg, `<@${msg.member.id}>: The delete count cannot be less than 1`, { delete: false, botMessageDelete: true, timeout: 5000})
+                    }
+                } else {
+                    return msg.channel.send(`${msg.author}: Seems like I don't have permission to do this command`)
+                }
             }
         }
     }
