@@ -271,7 +271,7 @@ export default class Handler {
      * @returns
      */
     reactionCollector(msg: Message, reactions: string | string[], filter: any, collectorOptions: {time: number}) {
-        if(!msg.guild) return console.log("Sounds like the reaction is happening in DM which I can't collect on")
+        if(!msg.guild) throw new Error("Seems like the collector is done inside a DM")
         if(Array.isArray(reactions) && typeof reactions !== "number") {
             for (let emojis of reactions) {
                 msg.react(emojis)
@@ -280,13 +280,13 @@ export default class Handler {
             if(filter === "everyone" || filter === "") {
                 filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot
             } else {
-                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && user.id === filter
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot && user.id === filter
             }
             return msg.awaitReactions(filters, collectorOptions)
         } else if(typeof reactions === "number") {
             throw new TypeError("Please make sure you didn't put a number for reactions")
         } else {
-            let filters: CollectorFilter = (reaction, user) => reaction.emoji.name === reactions && user.id === filter
+            let filters: CollectorFilter = (reaction, user) => reaction.emoji.name === reactions && !user.bot && user.id === filter
             msg.react(reactions)
             return msg.awaitReactions(filters, collectorOptions)
         }
@@ -443,6 +443,15 @@ export default class Handler {
                     return msg.channel.send(`${msg.author}: Seems like I don't have permission to do this command`)
                 }
             }
+        }
+    }
+    async fetcher(msg: Message, user: boolean, id: string) {
+        if(!msg) throw new Error("No msg parameter specified")
+        if(!id) return console.log("Please specify an id")
+        if(user) {
+            return msg.client.users.fetch(id)
+        } else {
+            return msg.guild.members.fetch(id)
         }
     }
 }
