@@ -28,7 +28,7 @@ export default class Handler {
      * @param commandFiletype - The filetype you want to only look in your command file
      */
     constructor(
-        client: Client, prefix: string | string[], commandDir?: string, commandFiletype?: string) {
+        client: Client, prefix: string | string[], commandDir?: string, commandFiletype?: string, eventFile?: string) {
         if(!client) {
             throw new Error("Please initiate a client")
         } else {
@@ -49,6 +49,15 @@ export default class Handler {
                 this.commandDir = commandDir
                 this.commandFiletype = commandFiletype
             }
+        }
+        if(eventFile) {
+            fs.readdir(eventFile, (err, file) => {
+                file.filter(file => file.endsWith(".js")).forEach(files => {
+                    let fileName = files.split(".")[0]
+                    let event = require(`./events/${fileName}`)
+                    client.on(fileName, (...args) => event(client, MessageEmbed, this, ...args))
+                })
+            })
         }
     }
     /**
