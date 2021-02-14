@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild } from "discord.js"
 
 import * as fs from "fs"
 
@@ -9,6 +9,8 @@ type Activities = "PLAYING" | "STREAMING" | "LISTENING" | "WATCHING" | "COMPETIN
 let collection: Collection<any, any> = new Collection()
 
 import * as dotenv from "dotenv"
+
+import * as duration from "humanize-duration"
 
 dotenv.config()
 
@@ -67,8 +69,8 @@ export default class Handler {
                         collection.set(command.name, command)
                     }
                     if(execute) {
-                        if(msg.content.startsWith(`-help`)) return msg.channel.send(collection.map(command => `${command.name} - ${!command.description ? "No description Found" : command.description}`).join("\n"))
-                        try {
+                        // try {
+                            let mapped_collection = collection
                             let args = this.setArgs(msg, { splitby: / +/g, noPrefix: false})
                             let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
                             if(Array.isArray(this.prefix)) {
@@ -78,15 +80,15 @@ export default class Handler {
                                             if(msg.channel.type === "dm") return msg.author.send(`This command is only available in the server`)
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             } else if(!command.hasOwnProperty("requiredRoles")) {
-                                                return command.execute(msg, args, MessageEmbed)
+                                                return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                             } else {
                                                 if(msg.member.roles.cache.has(command.requiredRoles)) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
@@ -94,15 +96,15 @@ export default class Handler {
                                         } else if(!command.hasOwnProperty("guildOnly")) {
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             } else if(!command.hasOwnProperty("requiredRoles")) {
-                                                return command.execute(msg, args, MessageEmbed)
+                                                return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                             } else {
                                                 if(msg.member.roles.cache.has(command.requiredRoles)) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
@@ -110,22 +112,24 @@ export default class Handler {
                                         } else {
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             } else if(!command.hasOwnProperty("requiredRoles")) {
-                                                return command.execute(msg, args, MessageEmbed)
+                                                return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                             } else {
                                                 if(msg.member.roles.cache.has(command.requiredRoles)) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             }
                                         }
                                     } else {
-                                        return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist`)
+                                        return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist`).then(message => {
+                                            message.delete({timeout: 5000}).catch(() => undefined)
+                                        });
                                     }
                                 }
                             } else {
@@ -135,15 +139,15 @@ export default class Handler {
                                             if(!msg.guild) return msg.author.send(`This command can only be executed in the server`)
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             } else if(!command.hasOwnProperty("requiredRoles")) {
-                                                return command.execute(msg, args, MessageEmbed)
+                                                return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                             } else {
                                                 if(msg.member.roles.cache.has(command.requiredRoles)) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
@@ -151,15 +155,15 @@ export default class Handler {
                                         } else if(!command.hasOwnProperty("guildOnly")) {
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             } else if(!command.hasOwnProperty("requiredRoles")) {
-                                                return command.execute(msg, args, MessageEmbed)
+                                                return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                             } else {
                                                 if(msg.member.roles.cache.has(command.requiredRoles)) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
@@ -167,28 +171,30 @@ export default class Handler {
                                         } else {
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id))) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             } else if(!command.hasOwnProperty("requiredRoles")) {
-                                                return command.execute(msg, args, MessageEmbed)
+                                                return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                             } else {
                                                 if(msg.member.roles.cache.has(command.requiredRoles)) {
-                                                    return command.execute(msg, args, MessageEmbed)
+                                                    return command.execute(msg, args, MessageEmbed, this, mapped_collection)
                                                 } else {
                                                     return this.messageSend(msg, `<@${msg.author.id}>: Seems like you don't have permission to run this command`, { delete: true, botMessageDelete: true, timeout: 5000})
                                                 }
                                             }
                                         }
                                     } else {
-                                        return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist`)
+                                        return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist`).then(message => {
+                                            message.delete({timeout: 5000}).catch(() => undefined)
+                                        });
                                     }
                                 }
                             }
-                        } catch (err) {
-                            return msg.channel.send(`${msg.author}: Seems like the command you are trying to execute has no execute function, or there is an error on the handler, might take awhile for the dev to fix this`)
-                        }
+                        // } catch (err) {
+                        //     return msg.channel.send(`<@${msg.author.id}>: Seems like the command you are trying to execute has no execute function, or there is an error on the handler, might take awhile for the dev to fix this`)
+                        // }
                     }
                 } 
             } else {
@@ -304,18 +310,18 @@ export default class Handler {
         if(typeof options.botMessageDelete !== "boolean") throw new TypeError("options.botMessageDelete must be a boolean")
         if(options.botMessageDelete && options.delete) {
             if(typeof options.timeout === "number") {
-                msg.delete()
+                msg.delete().catch(() => undefined)
                 msg.channel.send(message).then(m => {
                     m.delete({timeout: options.timeout}).catch(() => undefined)
                 })
             } else {
-                msg.delete()
+                msg.delete().catch(() => undefined)
                 msg.channel.send(message).then(m => {
                     m.delete({timeout: 5000}).catch(() => undefined)
                 })
             }
         } else if(!options.botMessageDelete && options.delete) {
-            msg.delete()
+            msg.delete().catch(() => undefined)
             msg.channel.send(message)
         } else if(!options.delete && options.botMessageDelete) {
             if(typeof options.timeout === "number") {
@@ -445,13 +451,22 @@ export default class Handler {
             }
         }
     }
-    async fetcher(msg: Message, user: boolean, id: string) {
+    fetcher(msg: Message, user: boolean, id: string): Promise<GuildMember> | Promise<User> {
         if(!msg) throw new Error("No msg parameter specified")
-        if(!id) return console.log("Please specify an id")
+        if(!id) throw new Error("Please specify an ID to fetch")
         if(user) {
             return msg.client.users.fetch(id)
         } else {
             return msg.guild.members.fetch(id)
         }
+    }
+    /**
+     * A time converter
+     * @param time - The date time you want to convert
+     */
+    timeConverter(time: number) {
+        if(!time) throw new Error("Please specify a time and make sure it is type number")
+        let overallAge = duration(time - Date.now(), { units: ["y", "mo", "d", "h", "m", "s"], round: true, conjunction: " and "})
+        return Date.now() - time <= 20000 ? "A moment ago" : Date.now() - time <= 12000000 ? "A minute ago" : Date.now() - time <= 7200000 ? "An hour ago" : Date.now() - time <= 86400000 ? "A day ago" : Date.now() - time <= 604800000 ? "A week ago" : Date.now() - time <= 2629746000 ? "A month ago" : Date.now() - time <= 63113904000 ? "A Year ago" : overallAge
     }
 }
