@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable } from "discord.js"
 
 import * as fs from "fs"
 
@@ -316,38 +316,14 @@ export default class Handler {
      * @param message - The message you want to send
      * @param options - options for you message send
      */
-    messageSend(msg: Message, message: string, options: { dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number}) {
+    messageSend(msg: Message, message: string, options: { dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: string[]}) {
         if(!options) throw new Error("Please specify an option")
         if(options.dm) return msg.author.send(message)
         if(typeof options.delete !== "boolean") throw new TypeError("options.delete must be a boolean")
         if(typeof options.botMessageDelete !== "boolean") throw new TypeError("options.botMessageDelete must be a boolean")
-        if(options.botMessageDelete && options.delete) {
-            if(typeof options.timeout === "number") {
-                msg.delete().catch(() => undefined)
-                msg.channel.send(message).then(m => {
-                    m.delete({timeout: options.timeout}).catch(() => undefined)
-                })
-            } else {
-                msg.delete().catch(() => undefined)
-                msg.channel.send(message).then(m => {
-                    m.delete({timeout: 5000}).catch(() => undefined)
-                })
-            }
-        } else if(!options.botMessageDelete && options.delete) {
-            msg.delete().catch(() => undefined)
-            msg.channel.send(message)
-        } else if(!options.delete && options.botMessageDelete) {
-            if(typeof options.timeout === "number") {
-                msg.channel.send(message).then(m => {
-                    m.delete({timeout: options.timeout}).catch(() => undefined)
-                })
-            } else {
-                msg.channel.send(message).then(m => {
-                    m.delete({timeout: 5000}).catch(() => undefined)
-                })
-            }
-        } else {
-            msg.channel.send(message)
+        if(options) {
+            options.delete ? msg.delete() : ""
+            options.botMessageDelete ? msg.channel.send(message, {files: options.picture}).then(message => message.delete({timeout: typeof options.timeout === "number" ? options.timeout : 5000})) : msg.channel.send(message, {files: options.picture})
         }
     }
     /**
