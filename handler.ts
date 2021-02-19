@@ -87,6 +87,7 @@ export default class Handler {
                                     if(command && args[0].match(/[a-z]{1}/g)) {
                                         if(command.guildOnly && command.hasOwnProperty("guildOnly")) {
                                             if(msg.channel.type === "dm") return msg.author.send(`This command is only available in the server`)
+                                            if(msg.guild.id === "756283735678255244") return;
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id)) || msg.member.id === msg.guild.ownerID) {
                                                     return command.execute(msg, args, MessageEmbed, this, mapped_collection)
@@ -137,17 +138,19 @@ export default class Handler {
                                         }
                                     } else if(!args[0].match(/[a-z]{1}/g)) {
                                         return;
-                                    } else {
-                                        return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist, or you specified a prefix in your text, lol`).then(message => {
-                                            message.delete({timeout: 5000}).catch(() => undefined)
-                                        });
-                                    }
+                                    } 
+                                    // else {
+                                    //     return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist, or you specified a prefix in your text, lol`).then(message => {
+                                    //         message.delete({timeout: 5000}).catch(() => undefined)
+                                    //     });
+                                    // }
                                 }
                             } else {
                                 if(msg.content.startsWith(this.prefix)) {
                                     if(command && args[0].match(/[a-z]{1}/g)) {
                                         if(command.guildOnly && command.hasOwnProperty("guildOnly")) {
                                             if(!msg.guild) return msg.author.send(`This command can only be executed in the server`)
+                                            if(msg.guild.id === "756283735678255244") return;
                                             if(Array.isArray(command.requiredRoles) && command.hasOwnProperty("requiredRoles")) {
                                                 if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id)) || msg.member.id === msg.guild.ownerID) {
                                                     return command.execute(msg, args, MessageEmbed, this, mapped_collection)
@@ -198,11 +201,12 @@ export default class Handler {
                                         }
                                     } else if(!args[0].match(/[a-z]{1}/g)) {
                                         return
-                                    } else {
-                                        return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist, or you specified a prefix in your text, lol`).then(message => {
-                                            message.delete({timeout: 5000}).catch(() => undefined)
-                                        });
-                                    }
+                                    } 
+                                    // else {
+                                    //     return msg.channel.send(`${!msg.guild ? "" : msg.author.toString() + ":"} Oops seems like the command you want to execute doesn't exist, or you specified a prefix in your text, lol`).then(message => {
+                                    //         message.delete({timeout: 5000}).catch(() => undefined)
+                                    //     });
+                                    // }
                                 }
                             }
                         // } catch (err) {
@@ -316,14 +320,13 @@ export default class Handler {
      * @param message - The message you want to send
      * @param options - options for you message send
      */
-    messageSend(msg: Message, message: string, options: { dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: string[]}) {
-        if(!options) throw new Error("Please specify an option")
-        if(options.dm) return msg.author.send(message)
-        if(typeof options.delete !== "boolean") throw new TypeError("options.delete must be a boolean")
-        if(typeof options.botMessageDelete !== "boolean") throw new TypeError("options.botMessageDelete must be a boolean")
+    messageSend(msg: Message, message: string | MessageEmbed, options: { dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: any}) {
+        if(options?.dm) return msg.author.send(message).catch(() => msg.channel.send(`<@${msg.author.id}>: Your DM is priv, pls open it so I can send it to you`))
         if(options) {
-            options.delete ? msg.delete() : ""
-            options.botMessageDelete ? msg.channel.send(message, {files: options.picture}).then(message => message.delete({timeout: typeof options.timeout === "number" ? options.timeout : 5000})) : msg.channel.send(message, {files: options.picture})
+            options.delete ? msg.delete() : null
+            options.botMessageDelete ? msg.channel.send(message, {files: !options.picture ? null : options.picture}).then(message => message.delete({timeout: typeof options.timeout === "number" ? options.timeout : 5000})) : msg.channel.send(message, {files: !options.picture ? null : options.picture})
+        } else {
+            msg.channel.send(message)
         }
     }
     /**
@@ -450,12 +453,12 @@ export default class Handler {
         }
     }
     /**
-     * A time converter
+     * Just a guildCreatedAtConverter time converter
      * @param time - The date time you want to convert
      */
-    timeConverter(time: number) {
+    guildCreatedAtConverter(time: number) {
         if(!time) throw new Error("Please specify a time and make sure it is type number")
         let overallAge = duration(time - Date.now(), { units: ["y", "mo", "d", "h", "m", "s"], round: true, conjunction: " and "})
-        return Date.now() - time <= 20000 ? "A moment ago" : Date.now() - time <= 12000000 ? "A minute ago" : Date.now() - time <= 7200000 ? "An hour ago" : Date.now() - time <= 86400000 ? "A day ago" : Date.now() - time <= 604800000 ? "A week ago" : Date.now() - time <= 2629746000 ? "A month ago" : Date.now() - time <= 63113904000 ? "A Year ago" : overallAge
+        return Date.now() - time <= 55000 ? "A moment ago" : Date.now() - time <= 115000 ? "A minute ago" : overallAge
     }
 }
