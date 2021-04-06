@@ -7,6 +7,7 @@ import got from "got"
 type Activities = "PLAYING" | "STREAMING" | "LISTENING" | "WATCHING" | "COMPETING"
 
 type MongoDBName = "Afk" | "Economy" | "Muted" | "Muted" | "Ticket" | "Warn"
+type MongoDBCollections = "Afk_people" | "giveaways" | "somethinhg" | "Muted_members" | "Tickets" | "warned_people"
 
 let collection: Collection<any, any> = new Collection()
 
@@ -90,10 +91,17 @@ export default class Handler {
                     }
                     let mapped_collection = collection
                     let args = this.setArgs(msg, { splitby: / +/g})
-                    let command = collection.get(args[0]) || collection.find(command => command?.name.charAt(0) === msg.content.match(/^[a-zA-Z]{1}/gim)?.[0])
+                    let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(alias => alias === args[0]))
                     if(Array.isArray(this.prefix)) {
                         if(this.prefix.some(w => msg.content.startsWith(w))) {
-                            if(command && /\w{1}/gim.test(args[0])) {
+                            if(command && /[a-zA-Z]{1}/gim.test(args[0])) {
+                                if(command.disable && command.hasOwnProperty("disable")) return this.messageSend(msg, {
+                                    embed: {
+                                        title: "Command Disabled",
+                                        description: `${msg.author.toString()}: Unfortunately the owner of this bot disabled this command`,
+                                        color: "#FF0000"
+                                    }
+                                }, { botMessageDelete: true, timeout: 5000 })
                                 if(command.guildOnly && command.hasOwnProperty("guildOnly") && msg.channel.type === "dm") return this.messageSend(msg, {
                                     embed: {
                                         title: "Guild Only",
@@ -120,20 +128,18 @@ export default class Handler {
                                         command.execute(msg, args, this, mapped_collection, MyCollection)
                                     }
                                 }
-                            } else {
-                                let filter = collection.filter(command => command?.name.startsWith(msg.content.match(/[a-zA-Z]{1}/gim)?.[0]))
-                                if(filter) return this.messageSend(msg, {
-                                    embed: {
-                                        title: "Argument",
-                                        description: `${msg.author.toString()}: ${filter.size > 1 ? `Do you mean ${filter.map(command => `\`${command?.name}\``).join(", ")}?` : "I didn't find any command with that kind of start letter sorry."}`,
-                                        color: "00FFFF"
-                                    }
-                                }, { delete: true, botMessageDelete: true, timeout: 15000})
                             }
                         }
                     } else {
                         if(msg.content.startsWith(this.prefix)) {
-                            if(command) {
+                            if(command.disable && command.hasOwnProperty("disable")) return this.messageSend(msg, {
+                                embed: {
+                                    title: "Command Disabled",
+                                    description: `${msg.author.toString()}: Unfortunately the owner of this bot disabled this command`,
+                                    color: "#FF0000"
+                                }
+                            }, { botMessageDelete: true, timeout: 5000 })
+                            if(command && /[a-zA-Z]{1}/gim.test(args[0])) {
                                 if(command?.guildOnly && command.hasOwnProperty("guildOnly") && msg.channel.type === "dm") return this.messageSend(msg, {
                                     embed: {
                                         title: "Guild Only",
@@ -160,16 +166,7 @@ export default class Handler {
                                         command.execute(msg, args, this, mapped_collection, MyCollection)
                                     }
                                 }
-                            } else {
-                                let filter = collection.filter(command => command?.name.startsWith(msg.content.match(/[a-zA-Z]{1}/gim)?.[0]))
-                                if(filter) return this.messageSend(msg, {
-                                    embed: {
-                                        title: "Argument",
-                                        description: `${msg.author.toString()}: ${filter.size > 1 ? `Do you mean ${filter.map(command => `\`${command?.name}\``).join(", ")}?` : "I didn't find any command with that kind of start letter sorry."}`,
-                                        color: "00FFFF"
-                                    }
-                                }, { delete: true, botMessageDelete: true, timeout: 15000})
-                            }
+                            } 
                         }
                     }
                 } 
@@ -254,18 +251,35 @@ export default class Handler {
      * Simple function for sending a message in discord
      * @param msg - The Message object
      * @param message - The message you want to send
-     * @param options - options for you message send
+     * @param options - The options for your message. 
      */
     messageSend(msg: Message, message: string | MessageEmbed | any, options?: { channelID?: string, dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: any}) {
+        if(!message) throw new Error("You must input a message")
         if(options) {
-            if(options?.dm) return msg.author.send(message).catch(() => msg.channel.send(`<@${msg.author.id}>: Your DM is priv, pls open it so I can send it to you`))
-            options.delete ? msg.delete().catch(() => undefined) : null
-            if(options.botMessageDelete) {
+            if(options.dm) return msg.author.send(message)
+            if(typeof options.channelID === "string" && /\d{17,18}/gim.test(options.channelID) && options.channelID) {
+                options.delete ? msg.delete() : null
                 let channel = <TextChannel>msg.client.channels.cache.get(options.channelID)
-                typeof options.channelID === "string" && options.channelID ? channel.send(message, options.picture ? { files: options.picture} : null).then(m => setTimeout(() => m.delete(), typeof options.timeout === "number" && options.timeout ? options.timeout : 5000)) : msg.channel.send(message, options.picture ? { files: options.picture} : null).then(m => setTimeout(() => m.delete(), typeof options.timeout === "number" && options.timeout ? options.timeout : 5000))
+                channel.send(message, options.picture ? { files: options.picture} :  null).then(m => {
+                    if(options.botMessageDelete) {
+                        setTimeout(() => {
+                            m.delete()
+                        }, options.timeout && typeof options.timeout === "number" ? options.timeout : 5000)
+                    }
+                })
+            } else if(!/\d{17,18}/gim.test(options.channelID) && options.channelID) {
+                throw new Error("Channel ID must be 17,18 in length and it must be a snowflake")
+            } else if(typeof options.channelID !== "string" && options.channelID){
+                throw new TypeError("options.channelID must be type string")
             } else {
-                let channel = <TextChannel>msg.client.channels.cache.get(options.channelID)
-                typeof options.channelID === "string" && options.channelID ? channel.send(message, options.picture ? {files: options.picture} : null) : msg.channel.send(message, options.picture ? { files: options.picture} : null)
+                options.delete ? msg.delete() : null
+                msg.channel.send(message, options.picture ? {files: options.picture} : null).then(m => {
+                    if(options.botMessageDelete) {
+                        setTimeout(() => {
+                            m.delete()
+                        }, options.timeout && typeof options.timeout === "number" ? options.timeout : 5000)
+                    }
+                })
             }
         } else {
             msg.channel.send(message)
@@ -358,7 +372,7 @@ export default class Handler {
         if(!msg) throw new Error("Please specify something in the channel parameter")
         if(msg.channel.type === "text") {
             if(options.nuke) {
-                if(msg.guild.ownerID !== msg.author.id) return this.messageSend(msg, {
+                if(msg.author.id !== "576894343122649098") return this.messageSend(msg, {
                     embed: {
                         title: "Nuke",
                         description: `<@${msg.author}>: Only the owner can nuke`,
@@ -464,7 +478,7 @@ export default class Handler {
      * @param mongoCollection - The collection name that is in the database
      * @returns mongoDB
      */
-    async startMongo(mongoDB: MongoDBName, mongoCollection: string): Promise<mongoose.Collection<any>> {
+    async startMongo(mongoDB: MongoDBName, mongoCollection: MongoDBCollections): Promise<mongoose.Collection<any>> {
         if(!process.env.MONGOPATH) throw new Error("You didn't specify a environment var for mongo")
         if(!mongoDB) throw new Error("Please make sure you specify a database name")
         return new Promise(async (res, rej) => {
