@@ -41,12 +41,15 @@ class RaidenSet extends Set {
      * @returns {any[]}
      */
     map(fn) {
-        let iter = this.values()
-        let arr = []
-        for(let val of iter) {
-            if(fn(val)) arr.push(val)
-        }
-        return arr
+        let index = 0
+        let values = this.keys()
+        return Array.from({
+            length: this.size
+        }, () => {
+            for(let value of values) {
+                if(fn(value)) return fn(value, index++)
+            }
+        }).filter(item => item)
     }
     /**
      * Finds an element that return true from fn and return it's value
@@ -82,6 +85,17 @@ class RaidenSet extends Set {
      */
     clear() {
         return super.clear()
+    }
+    /**
+     * Gets the last value from the Set
+     * 
+     */
+    last() {
+        let arr = []
+        for(let value of this) {
+            arr.push(value)
+        }
+        return arr[arr.length - 1]
     }
 }
 
