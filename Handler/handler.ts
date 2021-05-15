@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable, DiscordAPIError } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable } from "discord.js"
 
 import * as fs from "fs"
 
@@ -6,25 +6,21 @@ import got from "got"
 
 type Activities = "PLAYING" | "STREAMING" | "LISTENING" | "WATCHING" | "COMPETING"
 
-type MongoDBName = "Afk" | "Economy" | "Muted" | "Muted" | "Ticket" | "Warn"
-type MongoDBCollections = "Afk_people" | "giveaways" | "somethinhg" | "Muted_members" | "Tickets" | "warned_people"
-
 let collection: Collection<any, any> = new Collection()
 
 import * as dotenv from "dotenv"
 
 import * as duration from "humanize-duration"
-let count = 0
-dotenv.config()
 
+dotenv.config()
+let count = 0
 import * as mongoose from "mongodb"
 import { resolveProjectReferencePath } from "typescript"
 import { Db } from "mongodb"
 
-import handler from "./handler"
-import col from "./collectionHandler"
+import collections from "./collectionHandler"
 
-let MyCollection = new col()
+let MyCollection = new collections()
 /// <reference path="./Typings/index.d.ts"/>
 export default class Handler {
     public prefix: string | string[]
@@ -67,7 +63,7 @@ export default class Handler {
                 file.filter(file => file.endsWith(".js")).forEach(files => {
                     let fileName = files.split(".")[0]
                     let event = require(`./events/${fileName}`)
-                    client.on(fileName, (...args) => event(client, MessageEmbed, MyCollection ,this, ...args))
+                    client.on(fileName, (...args) => event.execute(client, this, MyCollection, ...args))
                 })
             })
         }
@@ -91,7 +87,7 @@ export default class Handler {
                     }
                     let mapped_collection = collection
                     let args = this.setArgs(msg, { splitby: / +/g})
-                    let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(alias => alias === args[0]))
+                    let command = collection.get(args[0]) || collection.find(command => command.aliases?.some(w => w === args[0]))
                     if(Array.isArray(this.prefix)) {
                         if(this.prefix.some(w => msg.content.startsWith(w))) {
                             if(command && /[a-zA-Z]{1}/gim.test(args[0])) {
@@ -219,66 +215,33 @@ export default class Handler {
         }
     }
     /**
-     * This is a reaction collector
-     * @param msg - The message object
-     * @param reactions - Reactions you want the bot to react to your message
-     * @param filter - The filter. Writing "everyone" will accept everyone reactions, else won't
-     * @param collectorOptions - The options for the collector
-     * @returns
-     */
-    reactionCollector(msg: Message, reactions: string | string[], filter: any, collectorOptions: {time: number}) {
-        if(!msg.guild) throw new Error("Seems like the collector is done inside a DM")
-        if(Array.isArray(reactions) && typeof reactions !== "number") {
-            for (let emojis of reactions) {
-                msg.react(emojis)
-            }
-            let filters: CollectorFilter; 
-            if(filter === "everyone" || filter === "") {
-                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot
-            } else {
-                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot && user.id === filter
-            }
-            return msg.awaitReactions(filters, collectorOptions)
-        } else if(typeof reactions === "number") {
-            throw new TypeError("Please make sure you didn't put a number for reactions")
-        } else {
-            let filters: CollectorFilter = (reaction, user) => reaction.emoji.name === reactions && !user.bot && user.id === filter
-            msg.react(reactions)
-            return msg.awaitReactions(filters, collectorOptions)
-        }
-    }
-    /**
      * Simple function for sending a message in discord
      * @param msg - The Message object
      * @param message - The message you want to send
-     * @param options - The options for your message. 
+     * @param options - options for you message send
      */
     messageSend(msg: Message, message: string | MessageEmbed | any, options?: { channelID?: string, dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: any}) {
-        if(!message) throw new Error("You must input a message")
+        if(options?.dm) return msg.author.send(message).catch(() => msg.channel.send(`<@${msg.author.id}>: Your DM is priv, pls open it so I can send it to you`))
         if(options) {
-            if(options.dm) return msg.author.send(message)
-            if(typeof options.channelID === "string" && /\d{17,18}/gim.test(options.channelID) && options.channelID) {
-                options.delete ? msg.delete() : null
-                let channel = <TextChannel>msg.client.channels.cache.get(options.channelID)
-                channel.send(message, options.picture ? { files: options.picture} :  null).then(m => {
-                    if(options.botMessageDelete) {
-                        setTimeout(() => {
+            options.delete ? msg.delete().catch(() => undefined) : null
+            if(options.channelID) {
+                if(typeof options.channelID !== "string") throw new TypeError("Channel ID must be type string")
+                if(!/\d{17,18}/gim.test(options.channelID)) throw new Error("Channel ID must be 17,18 in length")
+                let channel = <TextChannel>this.client.channels.cache.get(options.channelID)
+                channel.send(message).then(m => {
+                    setTimeout(() => {
+                        if(options.botMessageDelete) {
                             m.delete()
-                        }, options.timeout && typeof options.timeout === "number" ? options.timeout : 5000)
-                    }
-                })
-            } else if(!/\d{17,18}/gim.test(options.channelID) && options.channelID) {
-                throw new Error("Channel ID must be 17,18 in length and it must be a snowflake")
-            } else if(typeof options.channelID !== "string" && options.channelID){
-                throw new TypeError("options.channelID must be type string")
+                        }
+                    }, typeof options.timeout && options.timeout ? options.timeout : 5000)
+                }).catch((err) => console.log(err))
             } else {
-                options.delete ? msg.delete() : null
-                msg.channel.send(message, options.picture ? {files: options.picture} : null).then(m => {
-                    if(options.botMessageDelete) {
-                        setTimeout(() => {
+                msg.channel.send(message).then(m => {
+                    setTimeout(() => {
+                        if(options.botMessageDelete) {
                             m.delete()
-                        }, options.timeout && typeof options.timeout === "number" ? options.timeout : 5000)
-                    }
+                        }
+                    }, typeof options.timeout && options.timeout ? options.timeout : 5000)
                 })
             }
         } else {
@@ -312,27 +275,33 @@ export default class Handler {
             if(statusMessage) {
                 if(statusType === 1 || statusType === "STREAMING") {
                     return this.client.user.setPresence({
-                        activity: {
-                            url: statusMessage,
-                            type: "STREAMING"
-                        },
+                        activities: [
+                            {
+                                url: statusMessage,
+                                type: "STREAMING"
+                            }
+                        ],
                         status: status
                     })
                 } else {
                     return this.client.user.setPresence({
-                        activity: {
-                            name: statusMessage,
-                            type: statusType
-                        },
-                        status: status
+                        activities: [
+                            {
+                                name: statusMessage,
+                                type: statusType
+                            }
+                        ]
                     })
                 }
             } else {
                 return this.client.user.setPresence({
-                    activity: {
-                        name: "Seems like you don't have status set in",
-                        type: "PLAYING"
-                    },
+                    activities: [
+                        {
+                            name: "Seems like you dont have custom status sete, so I'll set it for you",
+                            type: "PLAYING"
+                        },
+                    ],
+                    status: "idle"
                 })
             }
         }
@@ -372,60 +341,29 @@ export default class Handler {
         if(!msg) throw new Error("Please specify something in the channel parameter")
         if(msg.channel.type === "text") {
             if(options.nuke) {
-                if(msg.author.id !== "576894343122649098") return this.messageSend(msg, {
-                    embed: {
-                        title: "Nuke",
-                        description: `<@${msg.author}>: Only the owner can nuke`,
-                        color: "#FF0000"
-                    }
-                }, { delete: true, botMessageDelete: true, timeout: 5000})
+                if(msg.author.id !== "576894343122649098") return this.messageSend(msg, `${msg.author}: Only the owner can mute`, { delete: true, botMessageDelete: true, timeout: 5000})
                 return msg.channel.clone().then(channel => {
-                    msg.channel.delete()
-                    this.messageSend(msg, {
-                        embed: {
-                            title: "Nuked!",
-                            description: `<@${msg.member.id}>: You've nuked the last channel so I cloned it and created a new one`,
-                            color: "#00FFFF"
-                        }
-                    }, { channelID: channel.id})
+                    channel.delete()
+                    channel.send(`<@${msg.member.id}>: You've nuked the last channel so I cloned it and created a new one`)
                 })
             } else {
                 if(msg.guild.me.permissions.has("MANAGE_MESSAGES")) {
-                    if(count.toString() === "--nuke") return;
-                    if(/[^\d]/gim.test(count.toString())) return this.messageSend(msg, {
-                        embed: {
-                            title: "Argument Error",
-                            description: `<@${msg.author.id}>: Please provide a number`,
-                            color: "#FF0000"
-                        }
-                    }, { delete: true, botMessageDelete: true, timeout: 5000})
-                    if(count > 100) return this.messageSend(msg, {
-                        embed: {
-                            title: "RangeError",
-                            description: `<@${msg.author.id}>: Count must be less than 100`,
-                            color: "#FF0000"
-                        }
-                    }, { delete: true, botMessageDelete: true, timeout: 5000})
-                    await msg.delete().catch(() => undefined)
-                    msg.channel.bulkDelete(count, true).then(message => {
-                        if(message.size <= 1) {
-                            this.messageSend(msg, {
-                                embed: {
-                                    title: "Clean",
-                                    description: `Deleted ${message.size} message`,
-                                    color: "#00FFFF"
-                                }
-                            }, { delete: false, botMessageDelete: true, timeout: 5000})
-                        } else {
-                            this.messageSend(msg, {
-                                embed: {
-                                    title: "Clean",
-                                    description: `Deleted ${message.size} messages`,
-                                    color: "#00FFFF"
-                                }
-                            }, { delete: false, botMessageDelete: true, timeout: 5000})
-                        }
-                    })
+                    if(count >= 1 && count <= 100 && !isNaN(count)) {
+                        await msg.delete()
+                        msg.channel.bulkDelete(count).then(message => {
+                            if(message.size <= 1) {
+                                this.messageSend(msg, `Deleted ${message.size} message`, { delete: false, botMessageDelete: true, timeout: 5000})
+                            } else {
+                                this.messageSend(msg, `Deleted ${message.size} messages`, { delete: false, botMessageDelete: true, timeout: 5000})
+                            }
+                        })
+                    } else if(isNaN(count)) {
+                        this.messageSend(msg, `<@${msg.member.id}>: You specified a Not a Number value`, { delete: true, botMessageDelete: true, timeout: 5000})
+                    } else if(count > 100) {
+                        this.messageSend(msg, `<@${msg.member.id}>: You cannot delete that much messages`, { delete: true, botMessageDelete: true, timeout: 5000})
+                    } else {
+                        this.messageSend(msg, `<@${msg.member.id}>: The delete count cannot be less than 1`, { delete: false, botMessageDelete: true, timeout: 5000})
+                    }
                 } else {
                     return msg.channel.send(`${msg.author}: Seems like I don't have permission to do this command`)
                 }
@@ -442,58 +380,136 @@ export default class Handler {
         }
     }
     /**
-     * A simple epoch converter
-     * @param time - The epoch timestamp you want to convert
-     * @returns string
+     * Just a epochConverter time converter
+     * @param time - The date time you want to convert
      */
-    epochConverter(time: number, boost?: boolean) {
+    epochConverter(time: number, options?: { age?: boolean, boost?: boolean}) {
         if(!time) throw new Error("Please specify a time and make sure it is type number")
-        let date = Math.abs(Date.now() - time)
-        let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365.2425)
-        let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
-        let weeks = Math.floor(date / 1000 / 60 / 60 / 24 / 7)
-        let days = Math.floor(date / 1000 / 60 / 60 / 24)
-        let hours = Math.floor(date / 1000 / 60 / 60)
-        let minutes = Math.floor(date / 1000 / 60)
-        let seconds = Math.floor(date / 1000)
-        if(!boost) {
-            if(date >= 0 && date <= 20000) {
-                return `${Date.now() < time ? "In a moment" : "A moment ago"}`  
-            } else if(date >= 1000 * 60 * 1 && date <= 1000 * 60 * 2) {
-                return `${Date.now() < time ? "In a minute" : "A minute ago"}`  
-            } else if(date >= 1000 * 60 * 60 * 1 && date <= 1000 * 60 * 60 * 2) {
-                return `${Date.now() < time ? "In an hour" : "An hour ago"}`  
-            } else if(date >= 1000 * 60 * 60 * 24 * 7 && date <= 1000 * 60 * 60 * 24 * 14) {
-                return `${Date.now() < time ? "In a week" : "A week ago"}`
+        if(/\d{11}/gim.test(time.toString())) {
+            if(options?.age && !options?.boost) {
+                let date = Math.abs(Date.now() - time)
+                let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
+                let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
+                let days = Math.floor(date / 1000 / 60 / 60 / 24)
+                let hours = Math.floor(date / 1000 / 60 / 60)
+                let minutes = Math.floor(date / 1000 / 60)
+                let seconds = Math.floor(date / 1000)
+                if(date >= 1000 * 60 * 60 * 24 * 365 && date <= 1000 * 60 * 60 * 24 * 730) {
+                    return Date.now() > date ? "A year" : "In a year"
+                } else if(date >= 1000 * 60 * 60 * 24 * 30 && date <= 1000 * 60 * 60 * 24 * 60) {
+                    return Date.now() > date ? "A month" : "In a month"
+                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                    return Date.now() > date ? "A week" : "In a week"
+                } else if(date >= 1000 * 60 * 60 && date <= 1000 * 60 * 60 * 2) {
+                    return Date.now() > date ? "An hour" : "In an hour"
+                } else if(date >= 1000 * 60 && date <= 1000 * 60 * 2) {
+                    return Date.now() > date ? "A minute" : "In a minute"
+                } else if(date >= 1000 && date <= 1000 * 20) {
+                    return Date.now() > date ? "A moment" : "In a moment"
+                } else {
+                    return `${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}`
+                }
+            } else if(options?.boost) {
+                let date = Math.abs(Date.now() - time)
+                let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
+                let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
+                let days = Math.floor(date / 1000 / 60 / 60 / 24)
+                let hours = Math.floor(date / 1000 / 60 / 60)
+                let minutes = Math.floor(date / 1000 / 60)
+                let seconds = Math.floor(date / 1000)
+                return `For ${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}`
             } else {
-                return `${Date.now() < time ? "In " : ""}${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${weeks >= 1 && weeks <= 4 ? `${weeks} week${weeks <= 1 ? `` : "s"}` : ""}${days >= 1 && days <= 7 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 1 ? `` : "s"}` : ""}${Date.now() > time ? " ago" : ""}`
+                let date = Math.abs(Date.now() - time)
+                let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
+                let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
+                let days = Math.floor(date / 1000 / 60 / 60 / 24)
+                let hours = Math.floor(date / 1000 / 60 / 60)
+                let minutes = Math.floor(date / 1000 / 60)
+                let seconds = Math.floor(date / 1000)
+                if(date >= 1000 * 2 && date <= 1000 * 60) {
+                    return Date.now() > date ? "A moment ago" : "In a moment"
+                } else if(date >= 1000 * 60 * 1 && date <= 1000 * 60 * 3) {
+                     return Date.now() > date ? "A minute ago" : "In a minute"
+                } else if(date >= 1000 * 60 * 60 * 1 && date <= 1000 * 60 * 60 * 2) {
+                    return Date.now() > date ? "An hour ago" : "In an hour"
+                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                    return Date.now() > date ? "A week ago" : "In a week"
+                } else {
+                    return `${Date.now() < time ? "In " : ""}${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}${Date.now() > time ? " ago" : ""}`
+                }
             }
         } else {
-            return `For ${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${weeks >= 1 && weeks <= 4 ? `${weeks} week${weeks <= 1 ? `` : "s"}` : ""}${days >= 1 && days <= 7 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 1 ? `` : "s"}` : ""}`
+            if(options?.age && !options?.boost) {
+                let date = Math.abs(Date.now() - time * 1000)
+                let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
+                let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
+                let days = Math.floor(date / 1000 / 60 / 60 / 24)
+                let hours = Math.floor(date / 1000 / 60 / 60)
+                let minutes = Math.floor(date / 1000 / 60)
+                let seconds = Math.floor(date / 1000)
+                if(date >= 1000 * 60 * 60 * 24 * 365 && date <= 1000 * 60 * 60 * 24 * 730) {
+                    return Date.now() > date ? "A year" : "In a year"
+                } else if(date >= 1000 * 60 * 60 * 24 * 30 && date <= 1000 * 60 * 60 * 24 * 60) {
+                    return Date.now() > date ? "A month" : "In a month"
+                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                    return Date.now() > date ? "A week" : "In a week"
+                } else if(date >= 1000 * 60 * 60 && date <= 1000 * 60 * 60 * 2) {
+                    return Date.now() > date ? "An hour" : "In an hour"
+                } else if(date >= 1000 * 60 && date <= 1000 * 60 * 2) {
+                    return Date.now() > date ? "A minute" : "In a minute"
+                } else if(date >= 1000 && date <= 1000 * 20) {
+                    return Date.now() > date ? "A moment" : "In a moment"
+                } else {
+                    return `${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}`
+                }
+            } else if(options?.boost) {
+                let date = Math.abs(Date.now() - time)
+                let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
+                let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
+                let days = Math.floor(date / 1000 / 60 / 60 / 24)
+                let hours = Math.floor(date / 1000 / 60 / 60)
+                let minutes = Math.floor(date / 1000 / 60)
+                let seconds = Math.floor(date / 1000)
+                return `For ${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}`
+            } else {
+                let date = Math.abs(Date.now() - time * 1000)
+                let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
+                let months = Math.floor(date / 1000 / 60 / 60 / 24 / 30)
+                let days = Math.floor(date / 1000 / 60 / 60 / 24)
+                let hours = Math.floor(date / 1000 / 60 / 60)
+                let minutes = Math.floor(date / 1000 / 60)
+                let seconds = Math.floor(date / 1000)
+                if(date >= 1000 * 2 && date <= 1000 * 60) {
+                    return Date.now() > date ? "A moment ago" : "In a moment"
+                } else if(date >= 1000 * 60 * 1 && date <= 1000 * 60 * 3) {
+                    return Date.now() > date ? "A minute ago" : "In a minute"
+                } else if(date >= 1000 * 60 * 60 * 1 && date <= 1000 * 60 * 60 * 2) {
+                    return Date.now() > date ? "An hour ago" : "In an hour"
+                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                    return Date.now() > date ? "A week ago" : "In a week"
+                } else {
+                    return `${Date.now() < time * 1000 ? "In " : ""}${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}${Date.now() > time * 1000 ? " ago" : ""}`
+                }
+            }
         }
     }
-    /**
-     * A method to start a Mongo connection, used to store data to database
-     * @param mongoDB - The database Name
-     * @param mongoCollection - The collection name that is in the database
-     * @returns mongoDB
-     */
-    async startMongo(mongoDB: MongoDBName, mongoCollection: MongoDBCollections): Promise<mongoose.Collection<any>> {
+    async startMongo(mongoDB: string, mongoCollection: string, options?: { uri: string}): Promise<mongoose.Collection<any>> {
         if(!process.env.MONGOPATH) throw new Error("You didn't specify a environment var for mongo")
         if(!mongoDB) throw new Error("Please make sure you specify a database name")
-        return new Promise(async (res, rej) => {
+        if(options?.uri) {
+            return new Promise((res, rej) => {
                 let database: mongoose.Db
-                mongoose.connect(process.env.MONGOPATH, { useUnifiedTopology: true, useNewUrlParser: true, maxIdleTimeMS: 3500}, async (err, db) => {
+                mongoose.connect(options?.uri, { useUnifiedTopology: true, useNewUrlParser: true, maxIdleTimeMS: 3500}, (err, db) => {
                     if(err) rej("There's an error")
                     try {
                         database = db.db(mongoDB)
                         res(database.collection(mongoCollection))
-                        if(count === 0) {
+                        if(count >= 1) {
+                            return
+                        } else {
                             count++
-                            console.log("Connected Successfully")
+                            console.log("Connected")
                         }
-                    } catch (err) {
-                        console.log(`There's an err ${err}`)
                     } finally {
                         setTimeout(async () => {
                             await db.close()
@@ -502,6 +518,30 @@ export default class Handler {
                         }, 1000 * 60 * 2)
                     }
                 })
-        })
+            })
+        } else {
+            return new Promise((res, rej) => {
+                let database: mongoose.Db
+                mongoose.connect(process.env.MONGOPATH, { useUnifiedTopology: true, useNewUrlParser: true, maxIdleTimeMS: 3500}, (err, db) => {
+                    if(err) rej("There's an error")
+                    try {
+                        database = db.db(mongoDB)
+                        res(database.collection(mongoCollection))
+                        if(count >= 1) {
+                            return
+                        } else {
+                            count++
+                            console.log("Connected")
+                        }
+                    } finally {
+                        setTimeout(async () => {
+                            await db.close()
+                            console.log("DB has been closed")
+                            count = 0
+                        }, 1000 * 60 * 2)
+                    }
+                })
+            })
+        }
     }
 }

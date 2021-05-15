@@ -138,4 +138,4 @@ class RaidenCol extends Map {
     }
 }
 
-exports["default"] = RaidenCol
+module.exports = RaidenCol
