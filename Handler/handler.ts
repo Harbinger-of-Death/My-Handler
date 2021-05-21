@@ -584,7 +584,7 @@ export default class Handler {
                 let guild = this.client.guilds.cache.get(typeof guildID === "number" ? `${guildID}` : guildID)
                 let commands = fs.readdirSync(options?.slashCommandDir).filter(js => js.endsWith(".js"))
                 for(let file of commands) {
-                    let command = require(`./${options?.slashCommandDir}/${file}`)
+                    let command = require(`${options?.slashCommandDir}/${file}`)
                     let data = {
                         name: command?.name,
                         description: command?.description ?? "No description Found",
