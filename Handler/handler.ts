@@ -15,10 +15,10 @@ import * as duration from "humanize-duration"
 dotenv.config()
 let count = 0
 import * as mongoose from "mongodb"
-import { resolveProjectReferencePath } from "typescript"
+import { isConstructorDeclaration, resolveProjectReferencePath } from "typescript"
 import { Db } from "mongodb"
 
-import collections from "./collectionHandler"
+import collections from "./collectionHandler.js"
 
 let MyCollection = new collections()
 /// <reference path="./Typings/index.d.ts"/>
@@ -91,6 +91,7 @@ export default class Handler {
                     if(Array.isArray(this.prefix)) {
                         if(this.prefix.some(w => msg.content.startsWith(w))) {
                             if(command && /[a-zA-Z]{1}/gim.test(args[0])) {
+                                if(command?.slash) return;
                                 if(command.disable && command.hasOwnProperty("disable")) return this.messageSend(msg, {
                                     embed: {
                                         title: "Command Disabled",
@@ -128,14 +129,15 @@ export default class Handler {
                         }
                     } else {
                         if(msg.content.startsWith(this.prefix)) {
-                            if(command.disable && command.hasOwnProperty("disable")) return this.messageSend(msg, {
-                                embed: {
-                                    title: "Command Disabled",
-                                    description: `${msg.author.toString()}: Unfortunately the owner of this bot disabled this command`,
-                                    color: "#FF0000"
-                                }
-                            }, { botMessageDelete: true, timeout: 5000 })
                             if(command && /[a-zA-Z]{1}/gim.test(args[0])) {
+                                if(command?.slash) return;
+                                if(command.disable && command.hasOwnProperty("disable")) return this.messageSend(msg, {
+                                    embed: {
+                                        title: "Command Disabled",
+                                        description: `${msg.author.toString()}: Unfortunately the owner of this bot disabled this command`,
+                                        color: "#FF0000"
+                                    }
+                                }, { botMessageDelete: true, timeout: 5000 })
                                 if(command?.guildOnly && command.hasOwnProperty("guildOnly") && msg.channel.type === "dm") return this.messageSend(msg, {
                                     embed: {
                                         title: "Guild Only",
@@ -212,6 +214,35 @@ export default class Handler {
             } else {
                 console.log("I cannot multiply non-numbers")
             }
+        }
+    }
+    /**
+     * This is a reaction collector
+     * @param msg - The message object
+     * @param reactions - Reactions you want the bot to react to your message
+     * @param filter - The filter. Writing "everyone" will accept everyone reactions, else won't
+     * @param collectorOptions - The options for the collector
+     * @returns
+     */
+    reactionCollector(msg: Message, reactions: string | string[], filter: any, collectorOptions: {time: number}) {
+        if(!msg.guild) throw new Error("Seems like the collector is done inside a DM")
+        if(Array.isArray(reactions) && typeof reactions !== "number") {
+            for (let emojis of reactions) {
+                msg.react(emojis)
+            }
+            let filters: CollectorFilter<any>; 
+            if(filter === "everyone" || filter === "") {
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot
+            } else {
+                filters = (reaction, user) => reactions.some(w => w === reaction.emoji.name || reaction.emoji.id) && !user.bot && user.id === filter
+            }
+            return msg.awaitReactions(filters, collectorOptions)
+        } else if(typeof reactions === "number") {
+            throw new TypeError("Please make sure you didn't put a number for reactions")
+        } else {
+            let filters: CollectorFilter<any> = (reaction, user) => reaction.emoji.name === reactions && !user.bot && user.id === filter
+            msg.react(reactions)
+            return msg.awaitReactions(filters, collectorOptions)
         }
     }
     /**
@@ -398,7 +429,7 @@ export default class Handler {
                     return Date.now() > date ? "A year" : "In a year"
                 } else if(date >= 1000 * 60 * 60 * 24 * 30 && date <= 1000 * 60 * 60 * 24 * 60) {
                     return Date.now() > date ? "A month" : "In a month"
-                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                } else if(date >= 1000 * 60 * 60 * 24 * 7 && date <= 1000 * 60 * 60 * 24 * 14) {
                     return Date.now() > date ? "A week" : "In a week"
                 } else if(date >= 1000 * 60 * 60 && date <= 1000 * 60 * 60 * 2) {
                     return Date.now() > date ? "An hour" : "In an hour"
@@ -432,7 +463,7 @@ export default class Handler {
                      return Date.now() > date ? "A minute ago" : "In a minute"
                 } else if(date >= 1000 * 60 * 60 * 1 && date <= 1000 * 60 * 60 * 2) {
                     return Date.now() > date ? "An hour ago" : "In an hour"
-                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                } else if(date >= 1000 * 60 * 60 * 24 * 7 && date <= 1000 * 60 * 60 * 24 * 14) {
                     return Date.now() > date ? "A week ago" : "In a week"
                 } else {
                     return `${Date.now() < time ? "In " : ""}${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}${Date.now() > time ? " ago" : ""}`
@@ -451,7 +482,7 @@ export default class Handler {
                     return Date.now() > date ? "A year" : "In a year"
                 } else if(date >= 1000 * 60 * 60 * 24 * 30 && date <= 1000 * 60 * 60 * 24 * 60) {
                     return Date.now() > date ? "A month" : "In a month"
-                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                } else if(date >= 1000 * 60 * 60 * 24 * 7 && date <= 1000 * 60 * 60 * 24 * 14) {
                     return Date.now() > date ? "A week" : "In a week"
                 } else if(date >= 1000 * 60 * 60 && date <= 1000 * 60 * 60 * 2) {
                     return Date.now() > date ? "An hour" : "In an hour"
@@ -485,7 +516,7 @@ export default class Handler {
                     return Date.now() > date ? "A minute ago" : "In a minute"
                 } else if(date >= 1000 * 60 * 60 * 1 && date <= 1000 * 60 * 60 * 2) {
                     return Date.now() > date ? "An hour ago" : "In an hour"
-                } else if(date >= 1000 * 60 * 60 * 24 && date <= 1000 * 60 * 60 * 24 * 7) {
+                } else if(date >= 1000 * 60 * 60 * 24 * 7 && date <= 1000 * 60 * 60 * 24 * 14) {
                     return Date.now() > date ? "A week ago" : "In a week"
                 } else {
                     return `${Date.now() < time * 1000 ? "In " : ""}${years >= 1 ? `${years} year${years <= 1 ? "" : "s"}` : ""}${months >= 1 && months <= 12 ? `${months} month${months <= 1 ? "" : "s"}` : ""}${days >= 1 && days <= 30 ? `${days} day${days <= 1 ? "" : "s"}` : ""}${hours >= 1 && hours <= 24 ? `${hours} hour${hours <= 1 ? "" : "s"}` : ""}${minutes >= 1 && minutes <= 60 ? `${minutes} minute${minutes <= 1 ? "" : "s"}` : ""}${seconds >= 1 && seconds <= 60 ? `${seconds} second${seconds <= 0 ? "" : "s"}` : ""}${Date.now() > time * 1000 ? " ago" : ""}`
@@ -542,6 +573,39 @@ export default class Handler {
                     }
                 })
             })
+        }
+    }
+    slashHandler(guildID: string, options: { slashCommandDir: string}) {
+        if(!options) throw new Error("Please specify a dir for your slash")
+        if(typeof options?.slashCommandDir !== "string") throw new TypeError(`Type of slashDir must be type string but received=${typeof options?.slashCommandDir}`)
+        if(!/^(.\/|..\/)/gim.test(options?.slashCommandDir)) throw new Error("Please specify a valid file path, must start with ./ or ../")
+        if(this.client?.readyAt) {
+            if(guildID && /\d{17,18}/gim.test(guildID)) {
+                let guild = this.client.guilds.cache.get(typeof guildID === "number" ? `${guildID}` : guildID)
+                let commands = fs.readdirSync(options?.slashCommandDir).filter(js => js.endsWith(".js"))
+                for(let file of commands) {
+                    let command = require(`./${options?.slashCommandDir}/${file}`)
+                    let data = {
+                        name: command?.name,
+                        description: command?.description ?? "No description Found",
+                        options: Array.isArray(command?.options) ? command?.options : new TypeError(`slash options must be type array but received=${typeof command?.options}`)
+                    }
+                    if(command?.slash) {
+                        guild?.commands.create(data)
+                        MyCollection.set(command.name, command)
+                    }
+                }
+                this.client.on("interaction", (interaction: any) => {
+                    if(MyCollection.size > 0) {
+                        let filter = MyCollection.filter(slash => slash === interaction?.commandName)
+                        filter.first().execute(interaction, this.client)
+                    }
+                })
+            } else if(!/\d{17,18}/gim.test(guildID)) {
+                throw new Error(`guildID must contain 17,18 length instead received=${guildID?.length}`)
+            } else {
+                throw new Error("Please specify a guild ID")
+            }
         }
     }
 }
