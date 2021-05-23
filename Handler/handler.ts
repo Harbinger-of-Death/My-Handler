@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable, Interaction } from "discord.js"
 
 import * as fs from "fs"
 
@@ -575,7 +575,7 @@ export default class Handler {
             })
         }
     }
-    slashHandler(guildID: string, options: { slashCommandDir: string}) {
+    async slashHandler(guildID: string, options: { slashCommandDir: string}) {
         if(!options) throw new Error("Please specify a dir for your slash")
         if(typeof options?.slashCommandDir !== "string") throw new TypeError(`Type of slashDir must be type string but received=${typeof options?.slashCommandDir}`)
         if(!/^(.\/|..\/)/gim.test(options?.slashCommandDir)) throw new Error("Please specify a valid file path, must start with ./ or ../")
@@ -591,13 +591,25 @@ export default class Handler {
                         options: Array.isArray(command?.options) ? command?.options : new TypeError(`slash options must be type array but received=${typeof command?.options}`)
                     }
                     if(command?.slash) {
-                        guild?.commands.create(data)
+                        let commands = await guild?.commands.create(data)
                         MyCollection.set(command.name, command)
+                        if(command?.permissions && Array.isArray(command?.permissions)) {
+                            let validPerm = true
+                            for(let i = 0; i < command?.permissions.length; i++) {
+                                if(!/\d{17,18}/gim.test(command?.permissions[i].id)) validPerm = false
+                            }
+                            if(!validPerm) throw new Error("User/Role ID must be 17,18 in length or a valid User/Role ID")
+                            commands.setPermissions(command?.permissions)
+                            console.log(`Successfully set perms for interaction name ${command?.name}`)
+                        } else if(!Array.isArray(command?.permissions) && command?.permissions) {
+                            throw new TypeError("Permissions must be type array")
+                        }
                     }
                 }
                 this.client.on("interaction", (interaction: any) => {
                     if(MyCollection.size > 0) {
                         let filter = MyCollection.filter(slash => slash === interaction?.commandName)
+                        if(!filter.first().permissions?.some(role => role.type.toLowerCase() === "role" ? interaction?.member.roles.cache.has(role.id) : interaction?.member.id === role.id) && filter.first().hasOwnProperty("permissions")) return interaction.reply("Invalid Access", { ephemeral: true})
                         filter.first().execute(interaction, this.client)
                     }
                 })
