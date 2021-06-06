@@ -7,6 +7,8 @@ Installation
 2. transpile the handler.ts this creates a js version of the handler.ts code
 3. require the newly created js version of the handler in your main file
 
+***Note**: You need atleast v13-dev for this to work, otherwise it will error out
+
 Usage:
 ```ts
 let handler = require(path to the file)
