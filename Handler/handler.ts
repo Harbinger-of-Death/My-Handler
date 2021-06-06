@@ -1,4 +1,4 @@
-import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable, Interaction } from "discord.js"
+import { Client, Collection, CollectorFilter, DataResolver, Message, PresenceStatusData, MessageEmbed, TextBasedChannel, ActivityType, TextChannel, GuildMember, User, Guild, MessageAttachment, FileOptions, BufferResolvable, Snowflake, Interaction, ApplicationCommand } from "discord.js"
 
 import * as fs from "fs"
 
@@ -11,7 +11,6 @@ let collection: Collection<any, any> = new Collection()
 import * as dotenv from "dotenv"
 
 import * as duration from "humanize-duration"
-
 dotenv.config()
 let count = 0
 import * as mongoose from "mongodb"
@@ -99,6 +98,7 @@ export default class Handler {
                                         color: "#FF0000"
                                     }
                                 }, { botMessageDelete: true, timeout: 5000 })
+                                if(!command?.guildOnly) return command.execute(msg, args, this, mapped_collection, MyCollection)
                                 if(command.guildOnly && command.hasOwnProperty("guildOnly") && msg.channel.type === "dm") return this.messageSend(msg, {
                                     embed: {
                                         title: "Guild Only",
@@ -106,25 +106,21 @@ export default class Handler {
                                         color: "FF0000"
                                     }
                                 }, { dm: true})
-                                if(command?.requiredRoles && command.hasOwnProperty("requiredRoles") && msg.guild) {
-                                    if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id)) || msg.author.id === "576894343122649098") {
-                                        command.execute(msg, args, this, mapped_collection, MyCollection)
-                                    } else {
-                                        this.messageSend(msg, {
-                                            embed: {
-                                                title: "Roles Required",
-                                                description: `${msg.author.toString()}: You don't have permission to run this command`,
-                                                color: "#FF0000"
-                                            }
-                                        }, { delete: true, botMessageDelete: true, timeout: 5000})
+                                if(msg.author.id === "576894343122649098") return command.execute(msg, args, this, mapped_collection, MyCollection)
+                                if(!msg.member.roles.cache.some(role => command?.requiredRoles?.includes(role.id)) && command?.requiredRoles) return this.messageSend(msg, {
+                                    embed: {
+                                        title: "Roles Required",
+                                        description: `${msg.author.toString()}: You don't have the roles required for this command.\nRequired: ${command?.requiredRoles?.map(role => `<@&${role}>`).join(", ")}`,
+                                        color: "#FF0000"
                                     }
-                                } else if(!command?.requiredRoles) {
-                                    command.execute(msg, args, this, mapped_collection, MyCollection)
-                                } else {
-                                    if(msg.channel.type === "dm") {
-                                        command.execute(msg, args, this, mapped_collection, MyCollection)
+                                }, { delete: true, botMessageDelete: true, timeout: 1000 * 12}) 
+                                if(!msg.member.permissions.has(command?.permissions) && command?.permissions) return this.messageSend(msg, {
+                                    embed: {
+                                        title: "Perms Required",
+                                        description: `${msg.author.toString()}: You don't have the perms required for this command.\nRequired: ${command?.permissions?.map(perms => perms).map(", ")}`
                                     }
-                                }
+                                }, { delete: true, timeout: 1000 * 12, botMessageDelete: true})
+                                return command.execute(msg, args, this, mapped_collection, MyCollection)
                             }
                         }
                     } else {
@@ -138,6 +134,7 @@ export default class Handler {
                                         color: "#FF0000"
                                     }
                                 }, { botMessageDelete: true, timeout: 5000 })
+                                if(!command?.guildOnly) return command.execute(msg, args, this, mapped_collection, MyCollection)
                                 if(command?.guildOnly && command.hasOwnProperty("guildOnly") && msg.channel.type === "dm") return this.messageSend(msg, {
                                     embed: {
                                         title: "Guild Only",
@@ -145,25 +142,21 @@ export default class Handler {
                                         color: "FF0000"
                                     }
                                 }, { dm: true})
-                                if(command?.requiredRoles && command.hasOwnProperty("requiredRoles") && msg.guild) {
-                                    if(msg.member.roles.cache.some(role => command.requiredRoles.includes(role.id)) || msg.author.id === "576894343122649098") {
-                                        command.execute(msg, args, this, mapped_collection, MyCollection)
-                                    } else {
-                                        this.messageSend(msg, {
-                                            embed: {
-                                                title: "Roles Required",
-                                                description: `${msg.author.toString()}: You don't have permission to run this command`,
-                                                color: "#FF0000"
-                                            }
-                                        }, { delete: true, botMessageDelete: true, timeout: 5000})
+                                if(msg.author.id === "576894343122649098") return command.execute(msg, args, this, mapped_collection, MyCollection)
+                                if(!msg.member.roles.cache.some(role => command?.requiredRoles?.includes(role.id)) && command?.requiredRoles) return this.messageSend(msg, {
+                                    embed: {
+                                        title: "Roles Required",
+                                        description: `${msg.author.toString()}: You don't have the roles required for this command.\nRequired: ${command?.requiredRoles?.map(role => `<@&${role}>`).join(", ")}`,
+                                        color: "#FF0000"
                                     }
-                                } else if(!command?.requiredRoles) {
-                                    command.execute(msg, args, this, mapped_collection, MyCollection)
-                                } else {
-                                    if(msg.channel.type === "dm") {
-                                        command.execute(msg, args, this, mapped_collection, MyCollection)
+                                }, { delete: true, botMessageDelete: true, timeout: 1000 * 12}) 
+                                if(!msg.member.permissions.has(command?.permissions) && command?.permissions) return this.messageSend(msg, {
+                                    embed: {
+                                        title: "Perms Required",
+                                        description: `${msg.author.toString()}: You don't have the perms required for this command.\nRequired: ${command?.permissions?.map(perms => perms).map(", ")}`
                                     }
-                                }
+                                }, { delete: true, timeout: 1000 * 12, botMessageDelete: true})
+                                return command.execute(msg, args, this, mapped_collection, MyCollection)
                             } 
                         }
                     }
@@ -251,10 +244,16 @@ export default class Handler {
      * @param message - The message you want to send
      * @param options - options for you message send
      */
-    messageSend(msg: Message, message: string | MessageEmbed | any, options?: { channelID?: string, dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: any}) {
+    messageSend(msg: Message, message: string | MessageEmbed | any, options?: { reply?: boolean, channelID?: string, dm?: boolean, delete?: boolean, botMessageDelete?: boolean, timeout?: number, picture?: any}) {
         if(options?.dm) return msg.author.send(message).catch(() => msg.channel.send(`<@${msg.author.id}>: Your DM is priv, pls open it so I can send it to you`))
         if(options) {
             options.delete ? msg.delete().catch(() => undefined) : null
+            if(options?.reply) return msg.reply(message).then(m => {
+                if(options.botMessageDelete) {
+                    if(typeof options.timeout !== "number" && options.timeout) throw new TypeError("Timeout must be type number")
+                    setTimeout(() => m.delete().catch(() => undefined), options.timeout ? options.timeout : 1000 * 5)
+                }
+            })
             if(options.channelID) {
                 if(typeof options.channelID !== "string") throw new TypeError("Channel ID must be type string")
                 if(!/\d{17,18}/gim.test(options.channelID)) throw new Error("Channel ID must be 17,18 in length")
@@ -374,7 +373,7 @@ export default class Handler {
             if(options.nuke) {
                 if(msg.author.id !== "576894343122649098") return this.messageSend(msg, `${msg.author}: Only the owner can mute`, { delete: true, botMessageDelete: true, timeout: 5000})
                 return msg.channel.clone().then(channel => {
-                    channel.delete()
+                    msg.channel.delete()
                     channel.send(`<@${msg.member.id}>: You've nuked the last channel so I cloned it and created a new one`)
                 })
             } else {
@@ -401,22 +400,34 @@ export default class Handler {
             }
         }
     }
-    fetcher(msg: Message, user: boolean, id: string): Promise<GuildMember> | Promise<User> {
-        if(!msg) throw new Error("No msg parameter specified")
-        if(!id) throw new Error("Please specify an ID to fetch")
+    /**
+     * Just a simple user fetcher
+     * @param msg - The Message or Guild object to be used as a fetcher
+     * @param user - If you want to fetch a User or a GuildMember
+     * @param id - The ID of the User or GuildMember to fetch
+     */
+    fetcher(msg: Message | Guild, user: boolean, id?: string): Promise<GuildMember> | Promise<User> | Promise<Collection<Snowflake, GuildMember>> {
+        if(!msg) throw new Error("Required a Message obj or something that can be used to fetch a user")
+        if(typeof id !== "string") throw new TypeError("Requires ID to be string")
+        if(/\d{17,18}/gim.test(id)) throw new RangeError("Length of ID must be 17,18 in length")
         if(user) {
-            return msg.client.users.fetch(id)
+            if(!id) throw new Error("ID is required for User fetching")
+            return this.client.users.fetch(id)
         } else {
-            return msg.guild.members.fetch(id)
+            if(msg instanceof Message) {
+                return msg.guild.members.fetch(id)
+            } else {
+                return msg.members.fetch(id)
+            }
         }
     }
     /**
      * Just a epochConverter time converter
      * @param time - The date time you want to convert
      */
-    epochConverter(time: number, options?: { age?: boolean, boost?: boolean}) {
+     epochConverter(time: number, options?: { age?: boolean, boost?: boolean}) {
         if(!time) throw new Error("Please specify a time and make sure it is type number")
-        if(/\d{11}/gim.test(time.toString())) {
+        if(/\d{13}/gim.test(time.toString())) {
             if(options?.age && !options?.boost) {
                 let date = Math.abs(Date.now() - time)
                 let years = Math.floor(date / 1000 / 60 / 60 / 24 / 365)
@@ -575,6 +586,11 @@ export default class Handler {
             })
         }
     }
+    /**
+     * A handler for slash commands in Discord
+     * @param guildID - The guild ID you want this slash commands to be created on
+     * @param options - Options for slash commands
+     */
     async slashHandler(guildID: string, options: { slashCommandDir: string}) {
         if(!options) throw new Error("Please specify a dir for your slash")
         if(typeof options?.slashCommandDir !== "string") throw new TypeError(`Type of slashDir must be type string but received=${typeof options?.slashCommandDir}`)
@@ -591,7 +607,10 @@ export default class Handler {
                         options: Array.isArray(command?.options) ? command?.options : new TypeError(`slash options must be type array but received=${typeof command?.options}`)
                     }
                     if(command?.slash) {
-                        let commands = await guild?.commands.create(data)
+                        if(!(await guild?.commands.fetch()).some(val => val.name === command?.name)) {
+                            await guild?.commands.create(data)
+                            console.log(`Loaded command name ${command?.name}`)
+                        }
                         MyCollection.set(command.name, command)
                         if(command?.permissions && Array.isArray(command?.permissions)) {
                             let validPerm = true
@@ -599,18 +618,23 @@ export default class Handler {
                                 if(!/\d{17,18}/gim.test(command?.permissions[i].id)) validPerm = false
                             }
                             if(!validPerm) throw new Error("User/Role ID must be 17,18 in length or a valid User/Role ID")
-                            commands.setPermissions(command?.permissions)
-                            console.log(`Successfully set perms for interaction name ${command?.name}`)
+                            let perms = await guild?.commands.fetch()
+                            for(let [key, val] of perms) {
+                                await val.setPermissions(command?.permissions)
+                            }
                         } else if(!Array.isArray(command?.permissions) && command?.permissions) {
                             throw new TypeError("Permissions must be type array")
                         }
                     }
                 }
-                this.client.on("interaction", (interaction: any) => {
-                    if(MyCollection.size > 0) {
-                        let filter = MyCollection.filter(slash => slash === interaction?.commandName)
-                        if(!filter.first().permissions?.some(role => role.type.toLowerCase() === "role" ? interaction?.member.roles.cache.has(role.id) : interaction?.member.id === role.id) && filter.first().hasOwnProperty("permissions")) return interaction.reply("Invalid Access", { ephemeral: true})
-                        filter.first().execute(interaction, this.client)
+                this.client.on("interaction", (interaction: Interaction) => {
+                    if(interaction.type === "MESSAGE_COMPONENT") return this.client.ws.emit("Buttons", interaction)
+                    if(interaction.isCommand()) {
+                        if(MyCollection.size > 0) {
+                            let filter = MyCollection.filter(slash => slash === interaction?.commandName)
+                            if(!filter.first().permissions?.some(role => role.type.toLowerCase() === "role" ? interaction?.member.roles.cache.has(role.id) : interaction?.member.id === role.id) && filter.first().hasOwnProperty("permissions")) return interaction.reply("Invalid Access", { ephemeral: true})
+                            filter.first().execute(interaction, this.client, this)
+                        }
                     }
                 })
             } else if(!/\d{17,18}/gim.test(guildID)) {

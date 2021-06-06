@@ -136,6 +136,17 @@ class RaidenCol extends Map {
             return arr.slice(0, 5)
         }
     }
+    /**
+     * Checks if specified array of keys exists in the collection
+     * @param {any[]} c - The array of keys you want to check if exist
+     */
+    hasAll(c) {
+        if(!Array.isArray(c)) throw new TypeError("Method param takes an array of Keys")
+        for(let key of c) {
+            if(this.has(key)) return console.log(key + " = " + true)
+        }
+        return false
+    }
 }
 
 module.exports = RaidenCol
